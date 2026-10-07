@@ -1,6 +1,6 @@
 # 0004 — Native Camunda agentic orchestration
 
-- **Status:** Accepted, pending validation by [spike 001](../spikes/001-llm-provider-and-ai-agent-connector.md)
+- **Status:** Accepted, validated by [spike 001](../spikes/001-llm-provider-and-ai-agent-connector.md)
 - **Date:** 2026-10-06
 
 ## Context and problem statement

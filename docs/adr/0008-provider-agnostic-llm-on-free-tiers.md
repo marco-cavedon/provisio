@@ -1,6 +1,6 @@
 # 0008 — Provider-agnostic LLM and embeddings on free tiers
 
-- **Status:** Accepted, pending validation by [spike 001](../spikes/001-llm-provider-and-ai-agent-connector.md)
+- **Status:** Superseded by [ADR 0017](0017-llm-provider-after-spike-001.md)
 - **Date:** 2026-10-06
 
 ## Context and problem statement
