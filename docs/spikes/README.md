@@ -5,4 +5,4 @@ hypothesis, success criteria and outcome; the outcome may confirm or supersede a
 
 | Spike | Topic | Status |
 | --- | --- | --- |
-| [001](001-llm-provider-and-ai-agent-connector.md) | LLM provider and AI Agent connector | Planned |
+| [001](001-llm-provider-and-ai-agent-connector.md) | LLM provider and AI Agent connector | Completed |
