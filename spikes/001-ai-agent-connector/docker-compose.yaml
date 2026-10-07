@@ -1,0 +1,85 @@
+# Spike 001 — minimal Camunda 8.9 Self-Managed stack (orchestration + connectors).
+# Derived from the official lightweight distribution (camunda/camunda-distributions, camunda-8.9).
+# Throwaway: lives only on the spike branch.
+name: provisio-spike-001
+
+services:
+  camunda-data-init:
+    image: camunda/camunda:${CAMUNDA_VERSION:-8.9.23}
+    user: "0:0"
+    entrypoint: ["/bin/sh", "-c", "chown -R 1001:1001 /usr/local/camunda/camunda-data && chmod 775 /usr/local/camunda/camunda-data"]
+    volumes:
+      - camunda-data:/usr/local/camunda/camunda-data
+    restart: "no"
+
+  orchestration: # Zeebe + Operate + Tasklist, H2 as secondary storage
+    image: camunda/camunda:${CAMUNDA_VERSION:-8.9.23}
+    container_name: spike-orchestration
+    ports:
+      - "26500:26500" # gRPC (job workers)
+      - "9600:9600"   # management / health
+      - "8080:8080"   # REST API, Operate, Tasklist
+    mem_limit: 1g
+    restart: on-failure
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c 'exec 3<>/dev/tcp/127.0.0.1/9600 && echo -e \"GET /actuator/health/status HTTP/1.1\\r\\nHost: localhost\\r\\n\\r\\n\" >&3 && head -n 1 <&3'"]
+      interval: 2s
+      retries: 30
+      start_period: 30s
+    volumes:
+      - camunda:/usr/local/camunda/data
+      - camunda-data:/usr/local/camunda/camunda-data
+    configs:
+      - source: orchestration-config
+        target: /usr/local/camunda/config/application.yaml
+    depends_on:
+      camunda-data-init:
+        condition: service_completed_successfully
+
+  connectors: # runs the AI Agent connector; LLM_* variables become {{secrets.LLM_*}}
+    image: camunda/connectors-bundle:${CAMUNDA_CONNECTORS_VERSION:-8.9.14}
+    container_name: spike-connectors
+    ports:
+      - "8086:8080"
+    environment:
+      SECRET_LLM_API_KEY: ${LLM_API_KEY:?LLM_API_KEY is not set}
+      SECRET_LLM_BASE_URL: ${LLM_BASE_URL:?LLM_BASE_URL is not set}
+      SECRET_LLM_MODEL: ${LLM_MODEL:?LLM_MODEL is not set}
+    mem_limit: 512m
+    restart: on-failure
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:8080/actuator/health/readiness"]
+      interval: 10s
+      timeout: 2s
+      retries: 10
+      start_period: 30s
+    configs:
+      - source: connectors-config
+        target: application.yaml
+    depends_on:
+      orchestration:
+        condition: service_healthy
+
+volumes:
+  camunda:
+  camunda-data:
+
+configs:
+  connectors-config:
+    content: |
+      camunda:
+        client:
+          mode: self-managed
+          grpc-address: http://orchestration:26500
+          rest-address: http://orchestration:8080
+      management:
+        endpoints:
+          web:
+            exposure:
+              include: health
+        endpoint:
+          health:
+            probes:
+              enabled: true
+  orchestration-config:
+    file: ./configuration/application-h2.yaml

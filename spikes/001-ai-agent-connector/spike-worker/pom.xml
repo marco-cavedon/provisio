@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <!-- Spring Boot version aligned with the one Camunda 8.9.23 is built and tested against -->
+  <parent>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-parent</artifactId>
+    <version>4.0.8</version>
+    <relativePath/>
+  </parent>
+
+  <groupId>io.github.marcocavedon.provisio</groupId>
+  <artifactId>spike-worker</artifactId>
+  <version>0.0.1-SNAPSHOT</version>
+  <name>Provisio spike 001 worker</name>
+  <description>Throwaway job worker validating the Camunda AI Agent connector with an OpenAI-compatible LLM</description>
+
+  <properties>
+    <java.version>21</java.version>
+    <!-- Client version matches the orchestration cluster version -->
+    <camunda.version>8.9.23</camunda.version>
+    <!-- Camunda client 8.9.23 needs a newer Apache HttpClient than Spring Boot 4.0.8 manages -->
+    <httpclient5.version>5.6.4</httpclient5.version>
+    <httpcore5.version>5.4.4</httpcore5.version>
+  </properties>
+
+  <dependencies>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter</artifactId>
+    </dependency>
+    <!-- Camunda Spring Boot Starter: in 8.9 this artifact targets Spring Boot 4.x -->
+    <dependency>
+      <groupId>io.camunda</groupId>
+      <artifactId>camunda-spring-boot-starter</artifactId>
+      <version>${camunda.version}</version>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-maven-plugin</artifactId>
+      </plugin>
+    </plugins>
+  </build>
+</project>

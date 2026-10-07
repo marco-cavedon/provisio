@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:zeebe="http://camunda.org/schema/zeebe/1.0" xmlns:modeler="http://camunda.org/schema/modeler/1.0" id="Definitions_SpikeStockAgent" targetNamespace="http://bpmn.io/schema/bpmn" exporter="Provisio spike 001" exporterVersion="1.0" modeler:executionPlatform="Camunda Cloud" modeler:executionPlatformVersion="8.9.0">
+  <bpmn:process id="provisio-spike-stock-agent" name="Spike 001 - Stock agent" isExecutable="true">
+    <bpmn:startEvent id="Start" name="Question received">
+      <bpmn:outgoing>Flow_ToAgent</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:sequenceFlow id="Flow_ToAgent" sourceRef="Start" targetRef="StockAgent" />
+    <bpmn:adHocSubProcess id="StockAgent" name="Stock agent" zeebe:modelerTemplate="io.camunda.connectors.agenticai.aiagent.jobworker.v1" zeebe:modelerTemplateVersion="8">
+      <bpmn:extensionElements>
+        <zeebe:adHoc outputCollection="toolCallResults" outputElement="={&#10;  id: toolCall._meta.id,&#10;  name: toolCall._meta.name,&#10;  content: toolCallResult&#10;}" />
+        <zeebe:taskDefinition type="io.camunda.agenticai:aiagent-job-worker:1" retries="3" />
+        <zeebe:ioMapping>
+          <zeebe:input source="openaiCompatible" target="provider.type" />
+          <zeebe:input source="{{secrets.LLM_BASE_URL}}" target="provider.openaiCompatible.endpoint" />
+          <zeebe:input source="{{secrets.LLM_API_KEY}}" target="provider.openaiCompatible.authentication.apiKey" />
+          <zeebe:input source="{{secrets.LLM_MODEL}}" target="provider.openaiCompatible.model.model" />
+          <zeebe:input source="=&#34;You are an inventory assistant for a single warehouse. Always use the available tools to look up stock data and never guess quantities. A product is below its reorder point when onHand is lower than reorderPoint. Answer concisely and state which tool results your answer is based on.&#34;" target="data.systemPrompt.prompt" />
+          <zeebe:input source="=question" target="data.userPrompt.prompt" />
+          <zeebe:input source="=agent.context" target="agentContext" />
+          <zeebe:input source="in-process" target="data.memory.storage.type" />
+          <zeebe:input source="=20" target="data.memory.contextWindowSize" />
+          <zeebe:input source="=10" target="data.limits.maxModelCalls" />
+          <zeebe:input source="WAIT_FOR_TOOL_CALL_RESULTS" target="data.events.behavior" />
+          <zeebe:input source="text" target="data.response.format.type" />
+          <zeebe:input source="=false" target="data.response.format.parseJson" />
+          <zeebe:input source="=false" target="data.response.includeAssistantMessage" />
+          <zeebe:input source="=true" target="data.response.includeAgentContext" />
+          <zeebe:input target="agent" />
+          <zeebe:output source="=agent" target="agent" />
+        </zeebe:ioMapping>
+        <zeebe:taskHeaders>
+          <zeebe:header key="elementTemplateVersion" value="8" />
+          <zeebe:header key="elementTemplateId" value="io.camunda.connectors.agenticai.aiagent.jobworker.v1" />
+          <zeebe:header key="retryBackoff" value="PT10S" />
+        </zeebe:taskHeaders>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_ToAgent</bpmn:incoming>
+      <bpmn:outgoing>Flow_ToEnd</bpmn:outgoing>
+      <bpmn:serviceTask id="GetStockLevel" name="Get stock level">
+        <bpmn:documentation>Returns the current on-hand quantity and the reorder point of a product, given its SKU code.</bpmn:documentation>
+        <bpmn:extensionElements>
+          <zeebe:taskDefinition type="provisio.spike.get-stock-level" retries="3" />
+          <zeebe:ioMapping>
+            <zeebe:input source="=fromAi(toolCall.sku, &#34;The product SKU code, for example SKU-001&#34;, &#34;string&#34;)" target="sku" />
+            <zeebe:output source="=stockLevel" target="toolCallResult" />
+          </zeebe:ioMapping>
+        </bpmn:extensionElements>
+      </bpmn:serviceTask>
+    </bpmn:adHocSubProcess>
+    <bpmn:sequenceFlow id="Flow_ToEnd" sourceRef="StockAgent" targetRef="End" />
+    <bpmn:endEvent id="End" name="Answer produced">
+      <bpmn:incoming>Flow_ToEnd</bpmn:incoming>
+    </bpmn:endEvent>
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="provisio-spike-stock-agent">
+      <bpmndi:BPMNShape id="Start_di" bpmnElement="Start">
+        <dc:Bounds x="152" y="182" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="126" y="225" width="88" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="StockAgent_di" bpmnElement="StockAgent" isExpanded="true">
+        <dc:Bounds x="250" y="80" width="360" height="240" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="GetStockLevel_di" bpmnElement="GetStockLevel">
+        <dc:Bounds x="380" y="160" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="End_di" bpmnElement="End">
+        <dc:Bounds x="682" y="182" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="658" y="225" width="85" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_ToAgent_di" bpmnElement="Flow_ToAgent">
+        <di:waypoint x="188" y="200" />
+        <di:waypoint x="250" y="200" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_ToEnd_di" bpmnElement="Flow_ToEnd">
+        <di:waypoint x="610" y="200" />
+        <di:waypoint x="682" y="200" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>
