@@ -1,0 +1,9 @@
+config:
+  default: true
+  MD013: false        # line length: prose is wrapped by editors, not by hand
+  MD033: false        # inline HTML (e.g. <br/> in Mermaid labels)
+  MD024:
+    siblings_only: true  # repeated "Positive"/"Negative" headings in ADRs
+ignores:
+  - "**/node_modules/**"
+  - "LICENSE"

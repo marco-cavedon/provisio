@@ -1,0 +1,26 @@
+# Secrets — never commit real credentials
+.env
+.env.*
+!.env.example
+
+# IDE
+.idea/
+*.iml
+.vscode/
+.DS_Store
+
+# Java / Maven / Gradle
+target/
+build/
+.gradle/
+
+# Node
+node_modules/
+dist/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+.ruff_cache/
