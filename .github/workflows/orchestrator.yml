@@ -1,0 +1,58 @@
+name: Orchestrator
+
+# Runs on every PR and push to main, so the "build" check can be required by the ruleset.
+# A path-filter job decides whether the build really runs: a job skipped via `if:` counts as
+# successful for required checks, while a workflow not triggered at all would block the PR forever.
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  changes:
+    name: Detect changes
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read   # paths-filter lists the PR's changed files via the GitHub API
+    outputs:
+      orchestrator: ${{ steps.filter.outputs.orchestrator }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            orchestrator:
+              - 'orchestrator/**'
+              - 'mise.toml'
+              - '.github/workflows/orchestrator.yml'
+
+  build:
+    name: Build and test
+    needs: changes
+    if: needs.changes.outputs.orchestrator == 'true'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: orchestrator
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+          cache-dependency-path: orchestrator/pom.xml
+      - name: Build and test
+        run: ./mvnw --batch-mode --no-transfer-progress verify
+      - name: Publish module documentation
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: spring-modulith-docs
+          path: orchestrator/target/spring-modulith-docs
+          if-no-files-found: ignore

@@ -1,0 +1,12 @@
+spring:
+  application:
+    name: provisio-orchestrator
+
+# Defaults for running on the host against the local Docker Compose stack.
+# Inside Compose they are overridden through environment variables
+# (e.g. CAMUNDA_CLIENT_GRPCADDRESS, CAMUNDA_CLIENT_RESTADDRESS).
+camunda:
+  client:
+    mode: self-managed
+    grpc-address: http://localhost:26500
+    rest-address: http://localhost:8080
