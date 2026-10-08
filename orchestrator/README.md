@@ -31,6 +31,8 @@ Requires the Camunda stack running locally (ports 26500 and 8080).
 
 ## Conventions
 
+- **Job workers live in their domain module** (e.g. `inventory.worker`) and are named after the capability
+  (`provisio.inventory.get-stock-level`), see [ADR 0019](../docs/adr/0019-job-workers-live-in-domain-modules.md).
 - **Job worker classes are `public`**: the Camunda starter invokes worker methods reflectively from another package.
 - **Tools return domain variables**; the BPMN maps them to `toolCallResult`. Workers do not know they serve an agent.
 - **Tool errors are part of the tool contract**: business outcomes are returned as minimal structured data;
