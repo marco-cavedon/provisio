@@ -24,5 +24,6 @@ ADRs are immutable once accepted: a changed decision gets a **new** ADR that sup
 | [0017](0017-llm-provider-after-spike-001.md) | LLM provider and configuration after spike 001 | Accepted |
 | [0018](0018-trunk-based-development-and-tagged-releases.md) | Trunk-based development and tagged releases | Accepted |
 | [0019](0019-job-workers-live-in-domain-modules.md) | Job workers live in their domain modules | Accepted |
+| [0020](0020-local-mongodb-access-control.md) | MongoDB access control in local development | Accepted |
 
 New ADRs start from [`template.md`](template.md).
