@@ -75,12 +75,14 @@ docs/           ADRs, architecture diagrams, spike reports
 
 ## Quickstart
 
-_Coming soon._ Target experience:
+The local infrastructure runs today; the application services are being added step by step.
 
 ```bash
-cp .env.example .env   # add your API keys
-docker compose up
+cp .env.example .env   # fill in the values
+docker compose up -d
 ```
+
+See [`infra/README.md`](infra/README.md) for requirements, verification and troubleshooting.
 
 ## Documentation
 
