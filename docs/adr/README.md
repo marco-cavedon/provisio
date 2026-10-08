@@ -22,5 +22,6 @@ ADRs are immutable once accepted: a changed decision gets a **new** ADR that sup
 | [0015](0015-ci-cd.md) | CI/CD with GitHub Actions | Accepted |
 | [0016](0016-spring-modulith.md) | Spring Modulith and domain-oriented modules | Accepted |
 | [0017](0017-llm-provider-after-spike-001.md) | LLM provider and configuration after spike 001 | Accepted |
+| [0018](0018-trunk-based-development-and-tagged-releases.md) | Trunk-based development and tagged releases | Accepted |
 
 New ADRs start from [`template.md`](template.md).
