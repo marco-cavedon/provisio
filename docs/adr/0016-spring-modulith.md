@@ -1,6 +1,6 @@
 # 0016 — Spring Modulith and domain-oriented modules
 
-- **Status:** Accepted — refines the package structure of [ADR 0010](0010-single-spring-boot-application.md)
+- **Status:** Accepted — refines the package structure of [ADR 0010](0010-single-spring-boot-application.md); module candidates refined by [ADR 0019](0019-job-workers-live-in-domain-modules.md)
 - **Date:** 2026-10-06
 
 ## Context and problem statement
