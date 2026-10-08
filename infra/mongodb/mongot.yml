@@ -1,16 +1,15 @@
 # mongot (MongoDB Search / Vector Search, Community) for Provisio local development.
-# Reference: MongoDB docs, "Install mongot in a Docker Container".
+# Reference: MongoDB docs, "Install mongot in a Docker Container". The docs also list
+# syncSource.replicaSet.tls and .replicationReader: mongot 1.70.5 does not recognise them, so they are omitted.
 syncSource:
   replicaSet:
     hostAndPort: "mongodb:27017"
     scramAuth:
       username: "mongot"
-      passwordFile: "/run/secrets/mongot_password"
+      # Copy of the Compose secret with 0400 permissions, made at container start (see docker-compose.yml):
+      # mongot refuses a password file readable by anyone other than its owner.
+      passwordFile: "/tmp/mongot_password"
       authSource: "admin"
-    tls:
-      enabled: false
-    replicationReader:
-      readPreference: "secondaryPreferred"
 
 storage:
   dataPath: "/data/mongot"

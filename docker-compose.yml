@@ -91,6 +91,15 @@ services:
 
   mongot: # MongoDB Search / Vector Search, Community edition
     image: mongodb/mongodb-community-search:${MONGOT_VERSION:-1.70.5}
+    # mongot refuses a password file readable by anyone but its owner, while Compose mounts secrets
+    # world-readable (0444). Copy the secret with 0400 permissions, then run the image's original command.
+    entrypoint:
+      - sh
+      - -c
+      - >-
+        cp /run/secrets/mongot_password /tmp/mongot_password &&
+        chmod 400 /tmp/mongot_password &&
+        exec /mongot-community/mongot --config /mongot-community/config.default.yml
     restart: on-failure
     healthcheck:
       test: ["CMD-SHELL", "curl -fs http://localhost:8080/health | grep -q '^SERVING' || wget -qO- http://localhost:8080/health | grep -q '^SERVING'"]

@@ -33,8 +33,11 @@ one is missing.
   replica set. MongoDB Search for self-managed deployments requires MongoDB 8.3 or later; the stack uses 9.0.
 - **Initialisation as a one-shot service.** `mongodb-init` runs after `mongod` is healthy and before `mongot` starts;
   it is idempotent, so restarting the stack is always safe.
-- **`mongot` password as a Compose secret**, mounted as a file (`/run/secrets/mongot_password`), never in the image or
-  in the repository.
+- **`mongot` password as a Compose secret**, never in the image or in the repository. `mongot` refuses a password
+  file readable by anyone but its owner, while Compose mounts secrets world-readable: the `mongot` entrypoint copies
+  the secret to `/tmp/mongot_password` with `0400` permissions, then starts the image's original command.
+- **Official docs lag behind the image**: `syncSource.replicaSet.tls` and `.replicationReader` from the
+  installation guide are not recognised by `mongot` 1.70.5 and are omitted.
 - **Access control is disabled on `mongod` in local development**
   ([ADR 0020](../docs/adr/0020-local-mongodb-access-control.md)).
 
@@ -70,8 +73,8 @@ Measure with `docker stats --no-stream` once everything is healthy, and record t
 
 - **`mongot` unhealthy** → `docker compose logs mongot`. Authentication errors mean the password in `.env` changed
   after the user was created: re-run `docker compose up -d mongodb-init`, which updates it.
-- **`mongot` cannot write `/data/mongot`** → volume ownership issue; report it, it means the image runs as a
-  non-root user that does not own the named volume.
+- **`mongot` restarts with "permissions are too permissive"** → the password file reached `mongot` without `0400`
+  permissions; check that the service still uses the entrypoint defined in `docker-compose.yml`.
 - **Search index never becomes queryable** → check that `mongot` is healthy and that `mongod` logs show no errors
   connecting to `mongot:27028`.
 - **Clean restart** → `docker compose down -v` removes every volume (all process data and all MongoDB data).
