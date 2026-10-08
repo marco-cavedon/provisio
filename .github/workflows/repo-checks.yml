@@ -24,6 +24,16 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITLEAKS_ENABLE_COMMENTS: "false"   # read-only token: report via the failed check, not PR comments
 
+  commit-identities:
+    name: Commit identities
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # the whole history: rewritten or older commits are checked too
+      - name: Check author, committer and co-author emails
+        run: .github/scripts/check-commit-identities.sh HEAD
+
   docs:
     name: Docs lint and internal links
     runs-on: ubuntu-latest
