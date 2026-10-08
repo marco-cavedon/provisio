@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <!-- Same Spring Boot version Camunda 8.9.23 and Spring Modulith 2.0.8 are built against -->
+  <parent>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-parent</artifactId>
+    <version>4.0.8</version>
+    <relativePath/>
+  </parent>
+
+  <groupId>io.github.marcocavedon.provisio</groupId>
+  <artifactId>provisio-orchestrator</artifactId>
+  <version>0.1.0-SNAPSHOT</version>
+  <name>Provisio orchestrator</name>
+  <description>Agent tools (Camunda job workers) and backend-for-frontend for Provisio</description>
+
+  <properties>
+    <java.version>21</java.version>
+    <!-- Client version matches the orchestration cluster version (see infra) -->
+    <camunda.version>8.9.23</camunda.version>
+    <spring-modulith.version>2.0.8</spring-modulith.version>
+
+    <!--
+      Dependency alignment overrides. Re-check on every Camunda or Spring Boot upgrade.
+      Camunda client 8.9.23 is compiled against Apache HttpClient 5.6.4 / HttpCore 5.4.4, while Spring Boot 4.0.8
+      manages 5.5.2 / 5.3.6. Without these overrides the client fails at startup with NoSuchMethodError
+      (found in spike 001).
+    -->
+    <httpclient5.version>5.6.4</httpclient5.version>
+    <httpcore5.version>5.4.4</httpcore5.version>
+  </properties>
+
+  <dependencyManagement>
+    <dependencies>
+      <dependency>
+        <groupId>org.springframework.modulith</groupId>
+        <artifactId>spring-modulith-bom</artifactId>
+        <version>${spring-modulith.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
+
+  <dependencies>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>io.camunda</groupId>
+      <artifactId>camunda-spring-boot-starter</artifactId>
+      <version>${camunda.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.modulith</groupId>
+      <artifactId>spring-modulith-starter-core</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>org.springframework.modulith</groupId>
+      <artifactId>spring-modulith-starter-test</artifactId>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-maven-plugin</artifactId>
+      </plugin>
+      <!-- Fail fast with a clear message instead of cryptic class-file errors (found in spike 001) -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-enforcer-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>enforce-build-environment</id>
+            <goals>
+              <goal>enforce</goal>
+            </goals>
+            <configuration>
+              <rules>
+                <requireJavaVersion>
+                  <version>[21,)</version>
+                  <message>Provisio requires JDK 21 or later. Run 'mise install' in the repository root, or point JAVA_HOME to a JDK 21.</message>
+                </requireJavaVersion>
+                <requireMavenVersion>
+                  <version>[3.9,)</version>
+                  <message>Use the Maven Wrapper: ./mvnw</message>
+                </requireMavenVersion>
+              </rules>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
+</project>
