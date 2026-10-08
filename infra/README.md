@@ -67,7 +67,19 @@ mongosh "mongodb://localhost:27017/?directConnection=true"
 
 ## Resource usage
 
-Measure with `docker stats --no-stream` once everything is healthy, and record the result in this README.
+Measured with `docker stats --no-stream` on 2026-10-08, stack idle and healthy, after one run of `verify-search.js`:
+
+| Service | Memory | Limit |
+| --- | --- | --- |
+| `orchestration` | ~800 MiB | 1 GiB |
+| `mongot` | ~480 MiB | none |
+| `connectors` | ~340 MiB | 512 MiB |
+| `mongodb` | ~130 MiB | 1 GiB |
+| **Total** | **~1.75 GiB** | |
+
+Plan for at least **4 GiB of RAM available to Docker**: usage grows with data, indexes and process instances, and the
+orchestrator and forecasting services are still to be added. `mongot` has no memory limit yet: it is a JVM, and a
+limit chosen without load data risks out-of-memory kills; it will be set once real indexes exist.
 
 ## Troubleshooting
 
@@ -75,6 +87,8 @@ Measure with `docker stats --no-stream` once everything is healthy, and record t
   after the user was created: re-run `docker compose up -d mongodb-init`, which updates it.
 - **`mongot` restarts with "permissions are too permissive"** → the password file reached `mongot` without `0400`
   permissions; check that the service still uses the entrypoint defined in `docker-compose.yml`.
+- **`mongot` running but "unhealthy"** → `docker compose exec mongot curl -s http://localhost:8080/health` must
+  return `{"status":"SERVING"}`; the installation guide documents a plain-text response instead.
 - **Search index never becomes queryable** → check that `mongot` is healthy and that `mongod` logs show no errors
   connecting to `mongot:27028`.
 - **Clean restart** → `docker compose down -v` removes every volume (all process data and all MongoDB data).
