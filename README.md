@@ -89,6 +89,7 @@ See [`infra/README.md`](infra/README.md) for requirements, verification and trou
 - [Architecture Decision Records](docs/adr)
 - [Architecture](docs/architecture/README.md)
 - [Spikes](docs/spikes)
+- [AI diligence statement](AI-DILIGENCE.md) — how AI is used to build this project, and the controls around it
 
 ## Configuration and secrets
 

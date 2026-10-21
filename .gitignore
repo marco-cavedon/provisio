@@ -9,6 +9,9 @@
 .vscode/
 .DS_Store
 
+# Claude Code personal settings (shared settings and skills in .claude/ are versioned)
+.claude/settings.local.json
+
 # Java / Maven / Gradle
 target/
 build/
