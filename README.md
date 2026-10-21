@@ -57,7 +57,7 @@ See [`docs/architecture`](docs/architecture/README.md) for C4 context and contai
 | Forecasting | Python, FastAPI |
 | Data & retrieval | MongoDB Community with Search / Vector Search (`mongot`) |
 | Embeddings | Voyage AI |
-| LLM | Provider-agnostic; Gemini (free tier) by default |
+| LLM | Provider-agnostic through an OpenAI-compatible API; Groq (free tier) in development ([ADR 0017](docs/adr/0017-llm-provider-after-spike-001.md)) |
 | Frontend | React |
 | Runtime | Docker Compose — one command to run the full demo |
 

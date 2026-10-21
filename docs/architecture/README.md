@@ -10,7 +10,7 @@ flowchart LR
     supplier([Supplier])
     provisio[["Provisio<br/>Agentic replenishment"]]
     erp[(ERP<br/>simulated)]
-    llm[LLM provider<br/>Gemini]
+    llm[LLM provider<br/>OpenAI-compatible<br/>Groq in development]
     emb[Embedding provider<br/>Voyage AI]
 
     planner -- "reviews and approves<br/>order proposals" --> provisio
