@@ -1,4 +1,9 @@
-# Provisio
+<h1>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/brand/provisio-logo-dark.svg">
+    <img src="docs/brand/provisio-logo.svg" alt="Provisio" height="64">
+  </picture>
+</h1>
 
 [![Repository checks](https://github.com/marco-cavedon/provisio/actions/workflows/repo-checks.yml/badge.svg)](https://github.com/marco-cavedon/provisio/actions/workflows/repo-checks.yml)
 
