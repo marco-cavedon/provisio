@@ -20,7 +20,12 @@ import org.springframework.transaction.support.TransactionTemplate;
  * disabled (for example without a transaction manager), and the inventory ledger would lose its atomicity unnoticed.
  * Requires Docker.
  */
-@SpringBootTest(properties = "camunda.client.worker.defaults.enabled=false")
+@SpringBootTest(properties = {
+    "camunda.client.worker.defaults.enabled=false",
+    // Connection details come from the container (@ServiceConnection); the password check in MongoConfiguration
+    // still requires the variable to be set
+    "MONGODB_APP_PASSWORD=unused-connection-details-come-from-the-container"
+})
 @Import(MongoTestcontainersConfiguration.class)
 class MongoTransactionTests {
 
