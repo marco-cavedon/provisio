@@ -1,6 +1,6 @@
 # 0020 — MongoDB access control in local development
 
-- **Status:** Accepted
+- **Status:** Superseded by [ADR 0023](0023-mongodb-access-control.md)
 - **Date:** 2026-10-08
 
 ## Context and problem statement
