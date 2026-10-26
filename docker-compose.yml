@@ -93,10 +93,12 @@ services:
     image: mongodb/mongodb-community-search:${MONGOT_VERSION:-1.70.5}
     # mongot refuses a password file readable by anyone but its owner, while Compose mounts secrets
     # world-readable (0444). Copy the secret with 0400 permissions, then run the image's original command.
+    # The old copy is removed first: a restart keeps /tmp, and a 0400 file cannot be overwritten by its owner.
     entrypoint:
       - sh
       - -c
       - >-
+        rm -f /tmp/mongot_password &&
         cp /run/secrets/mongot_password /tmp/mongot_password &&
         chmod 400 /tmp/mongot_password &&
         exec /mongot-community/mongot --config /mongot-community/config.default.yml
