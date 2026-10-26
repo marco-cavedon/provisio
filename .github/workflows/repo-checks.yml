@@ -44,6 +44,8 @@ jobs:
         env:
           LLM_API_KEY: ci-placeholder
           MONGOT_PASSWORD: ci-placeholder
+          MONGODB_ADMIN_PASSWORD: ci-placeholder
+          MONGODB_APP_PASSWORD: ci-placeholder
         run: docker compose config --quiet
 
   docs:

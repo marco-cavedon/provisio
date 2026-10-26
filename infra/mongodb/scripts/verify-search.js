@@ -1,9 +1,12 @@
-// End-to-end check of MongoDB Search and Vector Search on the local stack.
-// Run with: docker compose exec mongodb mongosh --quiet --file /scripts/verify-search.js
-// Uses its own throwaway database, dropped at the end.
+// End-to-end check of MongoDB Search and Vector Search on the local stack, run as the application user:
+// it also proves that `provisio` can create search indexes on its own database.
+// Run with (mongosh prompts for MONGODB_APP_PASSWORD):
+//   docker compose exec mongodb mongosh -u provisio -p --authenticationDatabase admin --quiet \
+//     --file /scripts/verify-search.js
+// Uses a throwaway collection in the provisio database, dropped at the end.
 
-const check = db.getSiblingDB("provisio_infra_check");
-check.dropDatabase();
+const check = { docs: db.getSiblingDB("provisio").getCollection("infra_check") };
+check.docs.drop();
 
 check.docs.insertMany([
   { text: "Supplier A guarantees delivery in 5 working days", embedding: [0.9, 0.1, 0.0] },
@@ -37,7 +40,7 @@ const vector = check.docs.aggregate([
   { $project: { _id: 0, text: 1 } },
 ]).toArray();
 
-check.dropDatabase();
+check.docs.drop();
 
 if (fullText.length !== 1 || !fullText[0].text.includes("delay")) throw new Error(`$search failed: ${JSON.stringify(fullText)}`);
 if (vector.length !== 1 || !vector[0].text.includes("delay")) throw new Error(`$vectorSearch failed: ${JSON.stringify(vector)}`);

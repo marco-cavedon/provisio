@@ -60,9 +60,20 @@ services:
 
   # ---------------------------------------------------------------- MongoDB + mongot
 
-  mongodb: # single-node replica set, required by mongot (change streams)
+  mongodb: # single-node replica set, required by mongot (change streams); access control enabled
     image: mongodb/mongodb-community-server:${MONGODB_VERSION:-9.0.2-ubi8}
-    command: ["--config", "/etc/mongod.conf"]
+    # A replica set with access control needs a keyfile for internal authentication between members.
+    # With a single member nothing else reads it, so a fresh random keyfile is generated at every start:
+    # nothing to store, nothing to leak. mongod requires it to be readable by its owner only.
+    # The old file is removed first: a restart keeps /tmp, and a 0400 file cannot be overwritten by its owner.
+    entrypoint:
+      - sh
+      - -c
+      - >-
+        rm -f /tmp/mongod-keyfile &&
+        head -c 756 /dev/urandom | base64 -w 0 > /tmp/mongod-keyfile &&
+        chmod 400 /tmp/mongod-keyfile &&
+        exec mongod --config /etc/mongod.conf
     ports:
       - "127.0.0.1:27017:27017"
     mem_limit: 1g
@@ -77,11 +88,16 @@ services:
       - ./infra/mongodb/mongod.conf:/etc/mongod.conf:ro
       - ./infra/mongodb/scripts:/scripts:ro
 
-  mongodb-init: # one-shot and idempotent: replica set + mongot user
+  mongodb-init: # one-shot and idempotent: replica set + users (admin, mongot, provisio)
     image: mongodb/mongodb-community-server:${MONGODB_VERSION:-9.0.2-ubi8}
-    entrypoint: ["mongosh", "--host", "mongodb:27017", "--quiet", "--file", "/init/init-replica-set.js"]
+    # Shares mongod's network namespace, so it connects through localhost: the first user can only be
+    # created through the localhost exception, which does not apply to connections over the Compose network.
+    network_mode: "service:mongodb"
+    entrypoint: ["mongosh", "--host", "localhost:27017", "--quiet", "--file", "/init/init-replica-set.js"]
     environment:
       MONGOT_PASSWORD: ${MONGOT_PASSWORD:?MONGOT_PASSWORD is not set, see .env.example}
+      MONGODB_ADMIN_PASSWORD: ${MONGODB_ADMIN_PASSWORD:?MONGODB_ADMIN_PASSWORD is not set, see .env.example}
+      MONGODB_APP_PASSWORD: ${MONGODB_APP_PASSWORD:?MONGODB_APP_PASSWORD is not set, see .env.example}
     volumes:
       - ./infra/mongodb/init:/init:ro
     restart: "no"
