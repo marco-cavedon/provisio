@@ -82,6 +82,16 @@
       <artifactId>testcontainers-mongodb</artifactId>
       <scope>test</scope>
     </dependency>
+    <!--
+      Process tests: a real Camunda engine in Docker runs the BPMN and invokes the real job workers (ADR 0014).
+      Apache 2.0 (inherited from its parent, camunda-testing). Same version as the client; built against Spring Boot 4.
+    -->
+    <dependency>
+      <groupId>io.camunda</groupId>
+      <artifactId>camunda-process-test-spring</artifactId>
+      <version>${camunda.version}</version>
+      <scope>test</scope>
+    </dependency>
   </dependencies>
 
   <build>
