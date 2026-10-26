@@ -2,6 +2,23 @@ spring:
   application:
     name: provisio-orchestrator
 
+  # MongoDB connection (ADR 0023). Defaults for running on the host against the local Docker Compose stack.
+  # A single host with no replica set name makes the driver connect directly to that host: the replica set member
+  # is registered as mongodb:27017, a name that does not resolve outside the Compose network.
+  # The password comes from the environment only and has no default: startup fails if it is missing.
+  mongodb:
+    host: localhost
+    port: 27017
+    database: provisio
+    username: provisio
+    password: ${MONGODB_APP_PASSWORD}
+    authentication-database: admin
+
+  data:
+    mongodb:
+      # Indexes are created explicitly by the module that owns the collection (ADR 0022)
+      auto-index-creation: false
+
 # Defaults for running on the host against the local Docker Compose stack.
 # Inside Compose they are overridden through environment variables
 # (e.g. CAMUNDA_CLIENT_GRPCADDRESS, CAMUNDA_CLIENT_RESTADDRESS).

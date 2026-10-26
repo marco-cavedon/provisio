@@ -60,10 +60,26 @@
       <groupId>org.springframework.modulith</groupId>
       <artifactId>spring-modulith-starter-core</artifactId>
     </dependency>
+    <!-- MongoDB through Spring Data; the orchestrator is the only writer (ADR 0006, ADR 0022) -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-data-mongodb</artifactId>
+    </dependency>
 
     <dependency>
       <groupId>org.springframework.modulith</groupId>
       <artifactId>spring-modulith-starter-test</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <!-- Integration tests against a real MongoDB in Docker; versions managed by the Spring Boot BOM -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-testcontainers</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.testcontainers</groupId>
+      <artifactId>testcontainers-mongodb</artifactId>
       <scope>test</scope>
     </dependency>
   </dependencies>
