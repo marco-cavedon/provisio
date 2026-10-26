@@ -21,6 +21,7 @@ talks to ([ADR 0011](../docs/adr/0011-frontend-only-talks-to-bff.md)). It is the
 
 - `ProvisioApplicationTests` — the application context assembles (no broker needed: job workers are disabled).
 - `ModularityTests` — module boundaries are respected; module documentation is written to `target/spring-modulith-docs`.
+- `MongoConfigurationTests` — the application refuses to start without a MongoDB password (no Docker needed).
 - `MongoTransactionTests` — multi-document transactions commit and, above all, roll back against a real MongoDB
   (Docker required). Without a transaction manager, `@Transactional` would be silently ignored.
 
@@ -38,7 +39,9 @@ MONGODB_APP_PASSWORD=$(grep '^MONGODB_APP_PASSWORD=' ../.env | cut -d= -f2-) ./m
 ```
 
 In IntelliJ IDEA, set `MONGODB_APP_PASSWORD` in the run configuration's environment variables, or point the
-EnvFile plugin to `.env`. Startup fails with "Could not resolve placeholder 'MONGODB_APP_PASSWORD'" if it is missing.
+EnvFile plugin to `.env`. Startup fails with "MongoDB password is not set" if the variable is missing: Spring's
+configuration binding would otherwise pass the unresolved placeholder through as the password, and the error would
+appear only at the first query, as an authentication failure (`MongoConfiguration`).
 
 ## Conventions
 
