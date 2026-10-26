@@ -9,7 +9,7 @@ deterministic demand forecasting, retrieval over unstructured supplier knowledge
 orchestrated — and governed — by a BPMN process engine.
 
 > **Status:** early design. Architecture decisions are being recorded in [`docs/adr`](docs/adr).
-> No runnable demo yet.
+> No runnable demo yet. See the [roadmap](docs/roadmap.md) for milestones and planned requirements.
 
 ## The problem
 
@@ -41,8 +41,22 @@ while the process engine keeps every decision bounded, auditable and — above a
 2. A Camunda process starts. The AI agent gathers the forecast, current stock and supplier constraints (via RAG).
 3. The agent proposes a purchase order (supplier, quantity, rationale).
 4. A DMN table decides whether human approval is required.
-5. A planner approves or amends the proposal; the order is sent to a simulated ERP.
+5. A planner approves, amends or rejects the proposal, giving a reason for any change; approved orders are sent to a simulated ERP.
 6. **Twist:** a supplier email announces a delay — the process re-evaluates and may switch supplier.
+
+Every proposal keeps an audit record: the forecast version, the supplier documents the agent cited,
+the policy outcome and the human decision.
+
+## Success indicators
+
+Planned, not yet measured. The demo will replay a past period and compare Provisio with a simple fixed
+reorder-point policy on:
+
+- stock-out days and average inventory held;
+- share of proposals approved without changes, and share amended or rejected;
+- forecast accuracy against a naive baseline.
+
+Details are in the [roadmap](docs/roadmap.md).
 
 ## Architecture
 
@@ -86,6 +100,7 @@ See [`infra/README.md`](infra/README.md) for requirements, verification and trou
 
 ## Documentation
 
+- [Roadmap](docs/roadmap.md) — milestones and planned requirements
 - [Architecture Decision Records](docs/adr)
 - [Architecture](docs/architecture/README.md)
 - [Spikes](docs/spikes)
