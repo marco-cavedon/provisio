@@ -32,7 +32,19 @@ MongoDB on port 27017.
 
 The orchestrator connects to MongoDB as the `provisio` user and reads its password from the `MONGODB_APP_PASSWORD`
 environment variable. Spring does not read `.env` by itself, and the application deliberately does not import it:
-`.env` also holds credentials the orchestrator does not need. Pass the variable explicitly:
+`.env` also holds credentials the orchestrator does not need.
+
+The simplest way, from any directory:
+
+```bash
+orchestrator/run-local.sh            # extra arguments are passed to spring-boot:run
+```
+
+The script exports from `.env` only the variables listed in its `REQUIRED_VARS` (today `MONGODB_APP_PASSWORD`),
+parsing the file rather than sourcing it, checks that `mongodb` and `orchestration` are healthy, then runs
+`./mvnw spring-boot:run`. When `application.yaml` starts reading a new environment variable, add it to `REQUIRED_VARS`.
+
+Without the script, pass the variable explicitly from the `orchestrator` directory:
 
 ```bash
 MONGODB_APP_PASSWORD=$(grep '^MONGODB_APP_PASSWORD=' ../.env | cut -d= -f2-) ./mvnw spring-boot:run
