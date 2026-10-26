@@ -52,8 +52,11 @@ command -v docker > /dev/null || fail "docker not found: the orchestrator needs 
 
 for service in "${REQUIRED_SERVICES[@]}"; do
   health="$(docker compose --project-directory "$ROOT_DIR" ps --format '{{.Health}}' "$service" 2> /dev/null || true)"
-  [[ "$health" == "healthy" ]] \
-    || fail "service '$service' is not healthy (status: ${health:-not running}). Start the stack from $ROOT_DIR: docker compose up -d"
+  case "$health" in
+    healthy) ;;
+    starting) fail "service '$service' is still starting: retry in a few seconds." ;;
+    *) fail "service '$service' is not healthy (status: ${health:-not running}). Start the stack from $ROOT_DIR: docker compose up -d" ;;
+  esac
 done
 
 # 3. Run
