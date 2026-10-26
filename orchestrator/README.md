@@ -19,11 +19,39 @@ talks to ([ADR 0011](../docs/adr/0011-frontend-only-talks-to-bff.md)). It is the
 ./mvnw verify
 ```
 
-- `ProvisioApplicationTests` — the application context assembles (no broker needed: job workers are disabled).
+- `ProvisioApplicationTests` — the application context assembles (no broker needed: job workers are disabled;
+  MongoDB from a container, because the inventory module creates its indexes at startup).
 - `ModularityTests` — module boundaries are respected; module documentation is written to `target/spring-modulith-docs`.
 - `MongoConfigurationTests` — the application refuses to start without a MongoDB password (no Docker needed).
 - `MongoTransactionTests` — multi-document transactions commit and, above all, roll back against a real MongoDB
   (Docker required). Without a transaction manager, `@Transactional` would be silently ignored.
+- Inventory module ([ADR 0022](../docs/adr/0022-inventory-data-model.md)):
+  - `RecordMovementTests`, `TransactionRetryTests` — command validation and retry classification (no Docker needed).
+  - `InventoryServiceTests` — the write path: rejections leave no trace, idempotency, key conflicts, concurrent
+    issues never making stock negative.
+  - `InventoryReconciliationTests` — after a seeded random sequence of movements, every SKU's `onHand` equals the
+    sum of its deltas.
+  - `InventoryIndexesTests` — collections and indexes exist, creation is idempotent, a conflicting index stops startup.
+
+Integration tests share one Spring context and one MongoDB container: keep their `@SpringBootTest` properties and
+imports identical, or each variant starts its own.
+
+## Inventory module
+
+Products and stock levels for a single warehouse: an append-only movement ledger plus a per-SKU snapshot, written
+in one transaction ([ADR 0022](../docs/adr/0022-inventory-data-model.md)). Other modules use `InventoryQueries` and
+`InventoryOperations`; everything else is internal.
+
+- **Idempotency key:** derive it from the business event (e.g. `purchase-order:PO-42:line:1`), never from a random
+  value. The same key with a different SKU, type, quantity or `occurredAt` throws `IdempotencyKeyConflictException`.
+- **Rejections leave no trace:** a movement rejected for insufficient stock is not recorded, so a later attempt with
+  the same key is evaluated again.
+- **Retries:** transient transaction errors are retried up to three times; safe because movements are idempotent.
+- **Indexes** are created at startup by `InventoryIndexes`. A conflicting existing index stops startup instead of
+  being ignored.
+- **Known limit — back-dated movements:** the non-negative check uses the current stock, not the stock at
+  `occurredAt`. A back-dated issue can make a reconstruction of a past day show negative stock even though current
+  stock is not negative. Acceptable for the MVP; relevant when replaying a period (roadmap R8).
 
 ## Run
 
