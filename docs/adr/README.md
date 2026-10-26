@@ -26,5 +26,6 @@ ADRs are immutable once accepted: a changed decision gets a **new** ADR that sup
 | [0019](0019-job-workers-live-in-domain-modules.md) | Job workers live in their domain modules | Accepted |
 | [0020](0020-local-mongodb-access-control.md) | MongoDB access control in local development | Accepted |
 | [0021](0021-agent-delegation-model.md) | Delegation model for AI-assisted development | Accepted |
+| [0022](0022-inventory-data-model.md) | Inventory data model: movement ledger with stock snapshot | Accepted |
 
 New ADRs start from [`template.md`](template.md).
