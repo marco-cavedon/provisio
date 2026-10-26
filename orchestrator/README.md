@@ -83,6 +83,21 @@ EnvFile plugin to `.env`. Startup fails with "MongoDB password is not set" if th
 configuration binding would otherwise pass the unresolved placeholder through as the password, and the error would
 appear only at the first query, as an authentication failure (`MongoConfiguration`).
 
+## Stop
+
+```bash
+orchestrator/stop-local.sh
+```
+
+The script stops everything in order: first the orchestrator on the host, whether started by `run-local.sh` or by
+the IDE, with SIGTERM so Spring shuts down gracefully (up to 30 seconds); then the stack with `docker compose down`.
+Containers and network are removed, **volumes are kept**, so Camunda and MongoDB data survive. If the orchestrator
+does not stop in time, the script leaves the stack running and exits with an error.
+
+The orchestrator is found by its command line: a `java` process whose main class is `ProvisioApplication`. Processes
+that only mention the class name, such as `grep ProvisioApplication`, are not touched. To delete the data as well,
+run `docker compose down -v` from the repository root, deliberately (see [infra/README.md](../infra/README.md)).
+
 ## Conventions
 
 - **Job workers live in their domain module** (e.g. `inventory.worker`) and are named after the capability
