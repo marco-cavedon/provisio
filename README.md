@@ -95,8 +95,8 @@ docs/           ADRs, architecture diagrams, spike reports
 
 ## Quickstart
 
-The local stack and the orchestrator run today. The first start builds the orchestrator image, which takes a few
-minutes.
+The local stack and the orchestrator run today. The orchestrator image is pulled from GitHub Container Registry, or
+built from source when it is not available.
 
 ```bash
 cp .env.example .env   # fill in the values

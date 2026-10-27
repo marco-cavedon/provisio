@@ -107,3 +107,13 @@ The repository is private today. It goes public when the following hold, regardl
 - [ ] Docker images are published on version tags and the Compose file pulls them ([ADR 0024](adr/0024-image-publication-when-public.md)).
 - [ ] Simplifications and known limits are stated ([ADR 0002](adr/0002-domain-and-mvp-scope.md),
       [AI diligence statement](../AI-DILIGENCE.md#known-limits)).
+- [ ] Dependabot covers every ecosystem in the repository (GitHub Actions, Maven, Docker), and a security policy says
+      how to report a vulnerability.
+
+On the day it goes public, in the repository settings:
+
+- [ ] A ruleset protects `main`: pull requests only, required checks green, no force push
+      ([ADR 0015](adr/0015-ci-cd.md)). Rulesets are not available on a private repository of a free account, so
+      today the rule is kept by discipline, not enforced.
+- [ ] Private vulnerability reporting is enabled.
+- [ ] After the first publication, the container package is public and linked to the repository.
