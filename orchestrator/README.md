@@ -32,9 +32,15 @@ talks to ([ADR 0011](../docs/adr/0011-frontend-only-talks-to-bff.md)). It is the
   - `InventoryReconciliationTests` — after a seeded random sequence of movements, every SKU's `onHand` equals the
     sum of its deltas.
   - `InventoryIndexesTests` — collections and indexes exist, creation is idempotent, a conflicting index stops startup.
+  - `GetStockLevelWorkerTests` — the tool contract of `provisio.inventory.get-stock-level`, case by case (no Docker
+    needed).
+  - `GetStockLevelWorkerProcessTests` — the worker through the real invocation path: Camunda Process Test runs a
+    one-task test process (`src/test/resources/bpmn`) on a Camunda engine in Docker, against MongoDB in Docker.
 
 Integration tests share one Spring context and one MongoDB container: keep their `@SpringBootTest` properties and
 imports identical, or each variant starts its own.
+Process tests use a shared Camunda runtime (`camunda.process-test.runtime-mode=shared`) pinned to the stack's engine
+version; the first run downloads the `camunda/camunda` image.
 
 ## Inventory module
 
