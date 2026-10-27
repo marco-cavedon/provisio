@@ -42,7 +42,8 @@ services:
     image: camunda/connectors-bundle:${CAMUNDA_CONNECTORS_VERSION:-8.9.14}
     environment:
       # Only credentials are connector secrets (ADR 0017), mapped explicitly: least privilege.
-      SECRET_LLM_API_KEY: ${LLM_API_KEY:?LLM_API_KEY is not set, see .env.example}
+      # Optional while no process calls the LLM; it becomes required again (`:?`) with the agent process (roadmap, v0.4.0).
+      SECRET_LLM_API_KEY: ${LLM_API_KEY:-}
     mem_limit: 512m
     restart: on-failure
     healthcheck:

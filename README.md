@@ -99,7 +99,7 @@ The local stack and the orchestrator run today. The orchestrator image is pulled
 built from source when it is not available.
 
 ```bash
-cp .env.example .env   # fill in the values
+infra/init-env.sh      # creates .env with generated local passwords; never overwrites a value
 docker compose up -d
 ```
 

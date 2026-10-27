@@ -40,13 +40,30 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Validate docker-compose.yml
-        # Dummy values: the check validates structure and interpolation, it starts nothing
+        # Dummy values: the check validates structure and interpolation, it starts nothing.
+        # LLM_API_KEY is deliberately unset: it is optional until the agent process exists.
         env:
-          LLM_API_KEY: ci-placeholder
           MONGOT_PASSWORD: ci-placeholder
           MONGODB_ADMIN_PASSWORD: ci-placeholder
           MONGODB_APP_PASSWORD: ci-placeholder
         run: docker compose config --quiet
+
+  init-env:
+    name: init-env script (${{ matrix.os }})
+    # macOS runs the bash 3.2 and BSD tools that most readers of the quickstart have; Ubuntu also runs the case that
+    # needs Docker (macOS runners have none).
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: ShellCheck
+        if: runner.os == 'Linux'
+        run: shellcheck infra/init-env.sh .github/scripts/test-init-env.sh
+      - name: Test infra/init-env.sh
+        run: .github/scripts/test-init-env.sh
 
   docs:
     name: Docs lint and internal links

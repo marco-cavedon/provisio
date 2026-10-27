@@ -29,8 +29,15 @@ publication, Compose builds it from source, which takes a few minutes the first 
 | `mongodb/init/init-replica-set.js` | Initiates the replica set and creates the `admin`, `mongot` and `provisio` users; idempotent |
 | `mongodb/scripts/verify-search.js` | End-to-end check of `$search` and `$vectorSearch`, run as the application user |
 
-Required `.env` variables: `LLM_API_KEY`, `MONGOT_PASSWORD`, `MONGODB_ADMIN_PASSWORD`, `MONGODB_APP_PASSWORD`.
-Compose stops immediately with a clear message if one is missing.
+Required `.env` variables: `MONGOT_PASSWORD`, `MONGODB_ADMIN_PASSWORD`, `MONGODB_APP_PASSWORD`. Compose stops
+immediately with a clear message if one is missing. `LLM_API_KEY` is optional until the agent process exists.
+
+`init-env.sh` creates `.env` from `.env.example` and fills in the three passwords with random values, only where they
+are empty: it never overwrites a value, prints only the names of what it generated, and leaves the file readable by
+its owner only. It refuses to generate `MONGODB_ADMIN_PASSWORD` when the MongoDB data volume already exists, because
+the admin user keeps the password it was created with; the other two users are updated at every start. It needs
+bash (on Windows, WSL or Git Bash); without it, copy `.env.example` and set the values by hand
+(`openssl rand -hex 16`).
 
 ## Design notes
 
