@@ -75,6 +75,11 @@ services:
         head -c 756 /dev/urandom | base64 -w 0 > /tmp/mongod-keyfile &&
         chmod 400 /tmp/mongod-keyfile &&
         exec mongod --config /etc/mongod.conf
+    environment:
+      # Workaround for SERVER-121912: on Linux kernels 6.19 and newer, mongod 8.0+ refuses to start because the
+      # per-CPU caches of its TCMalloc rely on rseq. glibc keeps rseq, so TCMalloc falls back to per-thread caches
+      # (slightly slower allocation, irrelevant here). Remove it once a MongoDB release fixes the issue.
+      GLIBC_TUNABLES: glibc.pthread.rseq=1
     ports:
       - "127.0.0.1:27017:27017"
     mem_limit: 1g

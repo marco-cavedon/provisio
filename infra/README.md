@@ -110,6 +110,15 @@ Plan for at least **4 GiB of RAM available to Docker**: usage grows with data, i
 orchestrator (limit 768 MiB, not yet measured) and the forecasting service add to it. `mongot` has no memory limit yet: it is a JVM, and a
 limit chosen without load data risks out-of-memory kills; it will be set once real indexes exist.
 
+## Known issues
+
+- **MongoDB on Linux kernel 6.19 and newer** ([SERVER-121912](https://jira.mongodb.org/browse/SERVER-121912)): mongod
+  8.0+ refuses to start, with "Linux kernel versions 6.19 and newer has a known incompatibility", because the per-CPU
+  caches of its TCMalloc allocator rely on `rseq`. This affects hosts such as Ubuntu 26.04. The `mongodb` service sets
+  `GLIBC_TUNABLES=glibc.pthread.rseq=1`, so glibc keeps `rseq` and TCMalloc uses per-thread caches instead: slightly
+  slower allocation, irrelevant for a local demo. It is a workaround, not a fix, and it is removed once a MongoDB
+  release solves the issue. The integration tests apply the same setting, and CI runs on Ubuntu 26.04 to cover it.
+
 ## Troubleshooting
 
 - **`mongot` unhealthy** → `docker compose logs mongot`. Authentication errors mean the password in `.env` changed
