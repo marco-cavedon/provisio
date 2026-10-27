@@ -122,23 +122,24 @@ Each requirement states what must be true, not how to build it. The delegation l
 
 ## Before the repository goes public
 
-The repository is private today. It goes public when the following hold, regardless of milestone:
+The repository went public on 27 October 2026, after v0.1.0, once the following held:
 
-- [ ] The README status matches reality and states what does not exist yet.
-- [ ] The quickstart works from a clean clone, following only the documentation.
-- [ ] CI is green on `main`; the history passes secret scanning and the identity allow-list.
-- [ ] No data is committed whose license has not been verified (see R4).
-- [ ] Docker images are published on version tags and the Compose file pulls them ([ADR 0024](adr/0024-image-publication-when-public.md)).
+- [x] The README status matches reality and states what does not exist yet.
+- [x] The quickstart works from a clean clone, following only the documentation.
+- [x] CI is green on `main`; the history passes secret scanning and the identity allow-list.
+- [x] No data is committed whose license has not been verified (see R4).
 - [x] Simplifications and known limits are stated ([README](../README.md#simplifications),
       [AI diligence statement](../AI-DILIGENCE.md#known-limits)).
-- [x] Dependabot covers every ecosystem in the repository, with documented exceptions (Compose images and Camunda,
-      upgraded together by hand: see `.github/dependabot.yml`), and a [security policy](../SECURITY.md) says how to
-      report a vulnerability.
+- [x] Dependabot covers every ecosystem in the repository, with documented exceptions (Compose images, Camunda, and
+      Spring Boot minor releases, upgraded together by hand: see `.github/dependabot.yml`), and a
+      [security policy](../SECURITY.md) says how to report a vulnerability.
+- [x] A ruleset protects `main`: pull requests only, required checks green and up to date, no force push, no deletion
+      ([ADR 0015](adr/0015-ci-cd.md)). Before going public it was kept by discipline: rulesets are not available on a
+      private repository of a free account.
+- [x] Private vulnerability reporting is enabled.
 
-On the day it goes public, in the repository settings:
+Still open, with the first release that publishes images (v0.1.1):
 
-- [ ] A ruleset protects `main`: pull requests only, required checks green, no force push
-      ([ADR 0015](adr/0015-ci-cd.md)). Rulesets are not available on a private repository of a free account, so
-      today the rule is kept by discipline, not enforced.
-- [ ] Private vulnerability reporting is enabled.
-- [ ] After the first publication, the container package is public and linked to the repository.
+- [ ] Docker images are published on version tags and the Compose file pulls them
+      ([ADR 0024](adr/0024-image-publication-when-public.md)).
+- [ ] The container package is public and linked to the repository.
