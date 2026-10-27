@@ -12,7 +12,7 @@ Milestones after v0.1.0 are a draft and will be refined as each one starts.
 
 | Milestone | Goal | Requirements | Status |
 | --- | --- | --- | --- |
-| v0.1.0 — Foundations | Final Docker Compose infrastructure (Camunda, MongoDB, `mongot`), orchestrator skeleton, inventory module ([ADR 0022](adr/0022-inventory-data-model.md)) | — | In progress |
+| v0.1.0 — Foundations | Final Docker Compose infrastructure (Camunda, MongoDB, `mongot`), orchestrator skeleton, inventory module ([ADR 0022](adr/0022-inventory-data-model.md)) | — | Done |
 | v0.2.0 — Demand and forecasting | Sales dataset and seed, forecasting service, nightly forecast batch ([ADR 0006](adr/0006-precomputed-forecast-with-on-demand-recompute.md)) | R1, R2, R3, R4 | Draft |
 | v0.3.0 — Supplier knowledge | Synthetic supplier documents consistent with the dataset, retrieval over MongoDB Vector Search | R6 (retrieval references) | Draft |
 | v0.4.0 — Agentic replenishment | Agent process with tools, DMN approval policy, planner approval in the frontend | R5, R6 | Draft |
@@ -104,5 +104,6 @@ The repository is private today. It goes public when the following hold, regardl
 - [ ] The quickstart works from a clean clone, following only the documentation.
 - [ ] CI is green on `main`; the history passes secret scanning and the identity allow-list.
 - [ ] No data is committed whose license has not been verified (see R4).
+- [ ] Docker images are published on version tags and the Compose file pulls them ([ADR 0024](adr/0024-image-publication-when-public.md)).
 - [ ] Simplifications and known limits are stated ([ADR 0002](adr/0002-domain-and-mvp-scope.md),
       [AI diligence statement](../AI-DILIGENCE.md#known-limits)).

@@ -13,8 +13,9 @@ Provisio is a showcase project that automates warehouse purchase-order decisions
 deterministic demand forecasting, retrieval over unstructured supplier knowledge, and an AI agent
 orchestrated — and governed — by a BPMN process engine.
 
-> **Status:** early design. Architecture decisions are being recorded in [`docs/adr`](docs/adr).
-> No runnable demo yet. See the [roadmap](docs/roadmap.md) for milestones and planned requirements.
+> **Status:** v0.1.0, foundations. The local stack starts with one command: Camunda, MongoDB with Search, and the
+> orchestrator with the inventory module and its first agent tool. There is no end-to-end demo yet: forecasting,
+> supplier knowledge and the agent process come next. See the [roadmap](docs/roadmap.md).
 
 ## The problem
 
@@ -94,7 +95,8 @@ docs/           ADRs, architecture diagrams, spike reports
 
 ## Quickstart
 
-The local infrastructure runs today; the application services are being added step by step.
+The local stack and the orchestrator run today. The first start builds the orchestrator image, which takes a few
+minutes.
 
 ```bash
 cp .env.example .env   # fill in the values
