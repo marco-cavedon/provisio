@@ -27,6 +27,13 @@ updates:
       interval: weekly
     ignore:
       - dependency-name: "io.camunda:*"
+      # The Camunda starter is built against a given Spring Boot line, and Spring Modulith follows Spring Boot's minor
+      # releases. A new Spring Boot or Modulith minor is therefore upgraded by hand, together with Camunda, once
+      # Camunda supports it; patch releases still arrive automatically.
+      - dependency-name: "org.springframework.boot:*"
+        update-types: ["version-update:semver-minor"]
+      - dependency-name: "org.springframework.modulith:*"
+        update-types: ["version-update:semver-minor"]
     groups:
       # Minor and patch updates in one pull request; a major version is a decision, so it gets its own.
       maven-minor-and-patch:
@@ -37,6 +44,11 @@ updates:
     directory: /orchestrator   # base images of the orchestrator Dockerfile
     schedule:
       interval: weekly
+    ignore:
+      # A new Java release is a decision (ADR), not a bump: it changes the POM, CI, mise.toml and the Dockerfile together.
+      # Dependabot reads 21.0.x -> 26.0.x as a major update.
+      - dependency-name: "eclipse-temurin"
+        update-types: ["version-update:semver-major"]
     groups:
       # The JDK and JRE images move together: the jar is built and run on the same Java release.
       temurin:
