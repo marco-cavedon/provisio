@@ -8,7 +8,7 @@
   <parent>
     <groupId>org.springframework.boot</groupId>
     <artifactId>spring-boot-starter-parent</artifactId>
-    <version>4.0.8</version>
+    <version>4.1.2</version>
     <relativePath/>
   </parent>
 
@@ -22,7 +22,7 @@
     <java.version>21</java.version>
     <!-- Client version matches the orchestration cluster version (see infra) -->
     <camunda.version>8.9.23</camunda.version>
-    <spring-modulith.version>2.0.8</spring-modulith.version>
+    <spring-modulith.version>2.1.2</spring-modulith.version>
 
     <!--
       Dependency alignment overrides. Re-check on every Camunda or Spring Boot upgrade.
