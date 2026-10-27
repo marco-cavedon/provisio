@@ -20,6 +20,7 @@ jobs:
       pull-requests: read   # paths-filter lists the PR's changed files via the GitHub API
     outputs:
       orchestrator: ${{ steps.filter.outputs.orchestrator }}
+      image: ${{ steps.filter.outputs.image }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
@@ -30,6 +31,11 @@ jobs:
               - 'orchestrator/**'
               - 'mise.toml'
               - '.github/workflows/orchestrator.yml'
+            image:
+              - 'orchestrator/**'
+              - 'docker-compose.yml'
+              - '.github/workflows/orchestrator.yml'
+              - '.github/workflows/release.yml'
 
   build:
     name: Build and test
@@ -60,11 +66,35 @@ jobs:
   image:
     name: Docker image
     needs: changes
-    if: needs.changes.outputs.orchestrator == 'true'
+    if: needs.changes.outputs.image == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      # Builds the image the Compose stack runs, so a broken Dockerfile shows up here and not on a fresh clone.
-      # Runs in parallel with the tests; the image is not pushed anywhere.
-      - name: Build the orchestrator image
-        run: docker build --tag provisio-orchestrator:ci orchestrator
+
+      # Builds the image for both platforms the release workflow publishes, so a broken Dockerfile shows up here and
+      # not on a version tag. Runs in parallel with the tests; nothing is pushed.
+      - uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1 # v4.4.0
+        with:
+          platforms: arm64
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      - name: Build the orchestrator image for amd64 and arm64
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: orchestrator
+          platforms: linux/amd64,linux/arm64
+          push: false
+
+      # Compose names the published image and keeps the build as a fallback. Until a version is published (and on any
+      # clone of main between a merge and the next tag) the pull fails and Compose must build instead. A version that
+      # is never published forces that path.
+      - name: Check that Compose builds when the image cannot be pulled
+        env:
+          PROVISIO_VERSION: ci-${{ github.run_id }}
+          LLM_API_KEY: ci
+          MONGOT_PASSWORD: ci
+          MONGODB_ADMIN_PASSWORD: ci
+          MONGODB_APP_PASSWORD: ci
+        run: |
+          docker compose up --no-start --no-deps orchestrator
+          docker image inspect --format '{{.Id}}' "ghcr.io/marco-cavedon/provisio-orchestrator:${PROVISIO_VERSION}"
+          docker compose down

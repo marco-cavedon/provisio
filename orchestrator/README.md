@@ -63,12 +63,18 @@ in one transaction ([ADR 0022](../docs/adr/0022-inventory-data-model.md)). Other
 
 ### In Docker Compose
 
-`docker compose up -d` in the repository root builds the image (`Dockerfile`) and starts the orchestrator with the
-rest of the stack. After a code change, rebuild it with `docker compose up -d --build orchestrator`; follow it with
+`docker compose up -d` in the repository root starts the orchestrator with the rest of the stack, from the image
+published for the version in `docker-compose.yml`; if that image cannot be pulled, Compose builds it from the
+`Dockerfile`. After a code change, rebuild it with `docker compose up -d --build orchestrator`; follow it with
 `docker compose logs -f orchestrator`.
 
+A local build gets the same name as the published image and takes its place: `docker compose up -d` keeps running
+it until you run `docker compose pull orchestrator` to go back to the published one.
+
 The image is built in three stages: the jar with the Maven Wrapper (tests skipped: they need Docker and run in CI),
-then Spring Boot's layer extraction, then a JRE image running as a non-root user. Inside the Compose network the
+then Spring Boot's layer extraction, then a JRE image running as a non-root user. The release workflow publishes it
+for `linux/amd64` and `linux/arm64`; the jar is built once, natively, and only the last stage is built per
+platform. Inside the Compose network the
 orchestrator connects to the replica set `rs0` through the service name `mongodb`. It has no host port and no
 healthcheck yet: both come with the BFF.
 

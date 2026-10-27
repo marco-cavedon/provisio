@@ -4,9 +4,13 @@
 # Three stages: build the jar with the Maven Wrapper, extract it into layers, run on a JRE as a non-root user.
 # Layers go from least to most frequently changed, so a code change rebuilds only the last one.
 # Tests are skipped here: they need Docker and run in CI (orchestrator workflow) and with ./mvnw verify.
+#
+# Multi-platform (linux/amd64, linux/arm64; release workflow): the jar is platform-independent bytecode, so the build
+# and extract stages run once on the builder's native platform ($BUILDPLATFORM). Only the runtime stage is built per
+# target platform, and its only RUN step is the user creation, so emulation never runs Maven.
 
 # ---------------------------------------------------------------- build
-FROM eclipse-temurin:21-jdk AS build
+FROM --platform=$BUILDPLATFORM eclipse-temurin:21-jdk AS build
 WORKDIR /workspace
 
 COPY mvnw pom.xml ./
@@ -20,7 +24,7 @@ RUN --mount=type=cache,target=/root/.m2 \
     && cp target/provisio-orchestrator-*.jar application.jar
 
 # ---------------------------------------------------------------- extract layers
-FROM eclipse-temurin:21-jre AS extract
+FROM --platform=$BUILDPLATFORM eclipse-temurin:21-jre AS extract
 WORKDIR /extract
 COPY --from=build /workspace/application.jar application.jar
 RUN java -Djarmode=tools -jar application.jar extract --layers --launcher --destination layers

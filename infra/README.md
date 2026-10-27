@@ -9,11 +9,15 @@ repository root with `docker compose up -d`.
 | `connectors` | `camunda/connectors-bundle:8.9.14` | Connectors runtime, including the AI Agent connector | — |
 | `mongodb` | `mongodb/mongodb-community-server:9.0.2-ubi8` | Single-node replica set `rs0` | 27017 |
 | `mongot` | `mongodb/mongodb-community-search:1.70.5` | MongoDB Search and Vector Search | — |
-| `orchestrator` | built from `../orchestrator` | Provisio job workers (agent tools); see [its README](../orchestrator/README.md) | — |
+| `orchestrator` | `ghcr.io/marco-cavedon/provisio-orchestrator:0.1.1`, or built from `../orchestrator` | Provisio job workers (agent tools); see [its README](../orchestrator/README.md) | — |
 | `camunda-data-init`, `mongodb-init` | | One-shot initialisation jobs | — |
 
 Every host port is bound to `127.0.0.1`. Versions can be overridden with `CAMUNDA_VERSION`,
-`CAMUNDA_CONNECTORS_VERSION`, `MONGODB_VERSION`, `MONGOT_VERSION`.
+`CAMUNDA_CONNECTORS_VERSION`, `MONGODB_VERSION`, `MONGOT_VERSION`, `PROVISIO_VERSION`.
+
+The orchestrator image is published for `linux/amd64` and `linux/arm64` on every version tag
+([ADR 0024](../docs/adr/0024-image-publication-when-public.md)). When it cannot be pulled, for example before the first
+publication, Compose builds it from source, which takes a few minutes the first time.
 
 ## Configuration
 

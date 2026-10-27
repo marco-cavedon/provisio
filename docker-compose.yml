@@ -136,9 +136,13 @@ services:
 
   # ---------------------------------------------------------------- Provisio
 
-  orchestrator: # job workers (agent tools) and, later, the BFF; built from ./orchestrator
+  orchestrator: # job workers (agent tools) and, later, the BFF
+    # Published on every version tag by the release workflow (ADR 0024). Without a local copy, Compose pulls it; if the
+    # pull fails, it builds from ./orchestrator instead. Rebuild from source with `docker compose up -d --build`.
+    # The default version is bumped by the release-preparation pull request; the release workflow fails if it does not
+    # match the tag.
+    image: ghcr.io/marco-cavedon/provisio-orchestrator:${PROVISIO_VERSION:-0.1.1}
     build: ./orchestrator
-    image: provisio-orchestrator:local
     environment:
       # Inside the Compose network the replica set member name mongodb:27017 resolves, so the driver connects to the
       # replica set (from the host, application.yaml connects directly to localhost instead)
