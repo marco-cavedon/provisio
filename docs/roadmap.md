@@ -13,6 +13,7 @@ Milestones after v0.1.0 are a draft and will be refined as each one starts.
 | Milestone | Goal | Requirements | Status |
 | --- | --- | --- | --- |
 | v0.1.0 — Foundations | Final Docker Compose infrastructure (Camunda, MongoDB, `mongot`), orchestrator skeleton, inventory module ([ADR 0022](adr/0022-inventory-data-model.md)) | — | Done |
+| v0.1.1 — Public foundations | Repository public; published multi-platform images ([ADR 0024](adr/0024-image-publication-when-public.md)), quickstart without manual secrets, MongoDB on Linux 6.19+ kernels, security policy and dependency updates | — | Done with the tag |
 | v0.2.0 — Demand and forecasting | Sales dataset and seed, forecasting service, nightly forecast batch ([ADR 0006](adr/0006-precomputed-forecast-with-on-demand-recompute.md)) | R1, R2, R3, R4 | Draft |
 | v0.3.0 — Supplier knowledge | Synthetic supplier documents consistent with the dataset, retrieval over MongoDB Vector Search | R6 (retrieval references) | Draft |
 | v0.4.0 — Agentic replenishment | Agent process with tools, DMN approval policy, planner approval in the frontend; orders issued to the simulated ERP; `LLM_API_KEY` required again in Compose | R5, R6, R9 (orders and answers), R10 | Draft |
