@@ -127,3 +127,7 @@ limit chosen without load data risks out-of-memory kills; it will be set once re
 - **Upgrading a stack created before access control** → run `docker compose down -v` once, add the two new
   variables to `.env`, then `docker compose up -d`. MongoDB data is lost; it is test data only.
 - **Clean restart** → `docker compose down -v` removes every volume (all process data and all MongoDB data).
+- **`required variable … is missing a value` on `down` or `stop`** → Compose checks the required variables for every
+  command, not only `up`. With the right `.env` elsewhere, point to it: `docker compose --env-file <file> down`. If it
+  is lost, placeholders are enough to stop and remove: `MONGOT_PASSWORD=- MONGODB_ADMIN_PASSWORD=-
+  MONGODB_APP_PASSWORD=- docker compose down -v` (shell variables take precedence over `.env`).

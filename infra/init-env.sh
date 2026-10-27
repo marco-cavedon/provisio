@@ -84,7 +84,9 @@ case " $to_generate " in
 infra/init-env.sh: MONGODB_ADMIN_PASSWORD is empty, but the MongoDB data volume already exists.
 Its admin user keeps the password it was created with, so a new one would lock mongodb-init out. Either:
   - restore the .env (or just MONGODB_ADMIN_PASSWORD) used when the volume was created, or
-  - delete the local data and start over: docker compose down -v   (this removes every Provisio volume)
+  - delete the local data and start over (this removes every Provisio volume), then run this script again.
+    Compose refuses any command while a required password is empty, so give it placeholders for this one:
+      MONGOT_PASSWORD=- MONGODB_ADMIN_PASSWORD=- MONGODB_APP_PASSWORD=- docker compose down -v
 Nothing was changed.
 EOF
       exit 1
