@@ -1,0 +1,6 @@
+# Only what the build stage copies is sent to the builder: wrapper, POM and main sources
+*
+!mvnw
+!pom.xml
+!.mvn/
+!src/main/

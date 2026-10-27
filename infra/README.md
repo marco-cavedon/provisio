@@ -9,6 +9,7 @@ repository root with `docker compose up -d`.
 | `connectors` | `camunda/connectors-bundle:8.9.14` | Connectors runtime, including the AI Agent connector | — |
 | `mongodb` | `mongodb/mongodb-community-server:9.0.2-ubi8` | Single-node replica set `rs0` | 27017 |
 | `mongot` | `mongodb/mongodb-community-search:1.70.5` | MongoDB Search and Vector Search | — |
+| `orchestrator` | built from `../orchestrator` | Provisio job workers (agent tools); see [its README](../orchestrator/README.md) | — |
 | `camunda-data-init`, `mongodb-init` | | One-shot initialisation jobs | — |
 
 Every host port is bound to `127.0.0.1`. Versions can be overridden with `CAMUNDA_VERSION`,
@@ -95,7 +96,7 @@ Measured with `docker stats --no-stream` on 2026-10-08, stack idle and healthy, 
 | **Total** | **~1.75 GiB** | |
 
 Plan for at least **4 GiB of RAM available to Docker**: usage grows with data, indexes and process instances, and the
-orchestrator and forecasting services are still to be added. `mongot` has no memory limit yet: it is a JVM, and a
+orchestrator (limit 768 MiB, not yet measured) and the forecasting service add to it. `mongot` has no memory limit yet: it is a JVM, and a
 limit chosen without load data risks out-of-memory kills; it will be set once real indexes exist.
 
 ## Troubleshooting

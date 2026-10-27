@@ -56,3 +56,15 @@ jobs:
           name: spring-modulith-docs
           path: orchestrator/target/spring-modulith-docs
           if-no-files-found: ignore
+
+  image:
+    name: Docker image
+    needs: changes
+    if: needs.changes.outputs.orchestrator == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      # Builds the image the Compose stack runs, so a broken Dockerfile shows up here and not on a fresh clone.
+      # Runs in parallel with the tests; the image is not pushed anywhere.
+      - name: Build the orchestrator image
+        run: docker build --tag provisio-orchestrator:ci orchestrator
