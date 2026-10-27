@@ -12,6 +12,7 @@ import io.github.marcocavedon.provisio.inventory.MovementType;
 import io.github.marcocavedon.provisio.inventory.RecordMovement;
 import java.time.Instant;
 import java.util.Map;
+import org.bson.Document;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -67,8 +68,9 @@ class GetStockLevelWorkerProcessTests {
 
   @Test
   void returnsTheStockLevelOfAKnownSku() {
-    mongoTemplate.insert(Map.of("_id", "SKU-1", "name", "Product SKU-1", "category", "FOODS", "unit", "EA"),
-        "products");
+    // Through the driver: MongoTemplate.insert would write the generated _id back into the map, and Map.of is immutable
+    mongoTemplate.getCollection("products").insertOne(new Document("_id", "SKU-1")
+        .append("name", "Product SKU-1").append("category", "FOODS").append("unit", "EA"));
     MovementResult result = operations.recordMovement(new RecordMovement(
         "SKU-1", MovementType.RECEIPT, 7, Instant.parse("2026-10-27T09:00:00Z"), "process-test:receipt", null, null));
     String asOf = ((MovementResult.Recorded) result).movement().recordedAt().toString();
