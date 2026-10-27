@@ -53,6 +53,23 @@ while the process engine keeps every decision bounded, auditable and — above a
 Every proposal keeps an audit record: the forecast version, the supplier documents the agent cited,
 the policy outcome and the human decision.
 
+## Simplifications
+
+The MVP is a narrow, honest slice of the problem ([ADR 0002](docs/adr/0002-domain-and-mvp-scope.md)), not a
+production design:
+
+- One warehouse, one product category, a handful of suppliers.
+- Demand history comes from a public dataset; supplier contracts, SLAs, emails and delivery history are synthetic.
+- The ERP and the suppliers are simulated: no real system receives the orders.
+- Single-node local infrastructure: one MongoDB replica-set member, Camunda with embedded H2 storage. Nothing is
+  highly available.
+- No production authentication: Camunda runs with its demo credentials, and every port is bound to localhost.
+- The LLM runs on a free tier, so only synthetic or public data may ever reach it
+  ([ADR 0017](docs/adr/0017-llm-provider-after-spike-001.md)).
+
+These describe the finished MVP; the status at the top says what exists today. Known limits of each module are listed
+in its README, and those of the way the project is built in the [AI diligence statement](AI-DILIGENCE.md#known-limits).
+
 ## Success indicators
 
 Planned, not yet measured. The demo will replay a past period and compare Provisio with a simple fixed
@@ -112,6 +129,7 @@ See [`infra/README.md`](infra/README.md) for requirements, verification and trou
 - [Architecture](docs/architecture/README.md)
 - [Spikes](docs/spikes)
 - [AI diligence statement](AI-DILIGENCE.md) — how AI is used to build this project, and the controls around it
+- [Security policy](SECURITY.md) — how to report a vulnerability
 
 ## Configuration and secrets
 

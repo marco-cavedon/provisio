@@ -1,4 +1,15 @@
 version: 2
+
+# Version updates for every ecosystem in the repository, with two documented exceptions:
+#
+# - docker-compose.yml is not covered. Its images are coupled to each other and to the POM: the Camunda engine and
+#   connectors images to the Camunda client and Camunda Process Test in orchestrator/pom.xml, mongot to mongod.
+#   Dependabot groups updates only within one ecosystem, so it would bump one side and leave the other behind,
+#   and CI would not notice (the process tests run their own engine, not the Compose one). Upgrades of these
+#   images are manual pull requests that change every coupled version at once.
+# - io.camunda Maven artifacts are ignored for the same reason. Ignore rules apply to security updates too:
+#   a Camunda vulnerability still shows as an alert in the Security tab, and is fixed by the same manual upgrade.
+
 updates:
   - package-ecosystem: github-actions
     directory: /
@@ -9,3 +20,24 @@ updates:
     groups:
       github-actions:
         patterns: ["*"]
+
+  - package-ecosystem: maven
+    directory: /orchestrator
+    schedule:
+      interval: weekly
+    ignore:
+      - dependency-name: "io.camunda:*"
+    groups:
+      # Minor and patch updates in one pull request; a major version is a decision, so it gets its own.
+      maven-minor-and-patch:
+        applies-to: version-updates
+        update-types: [minor, patch]
+
+  - package-ecosystem: docker
+    directory: /orchestrator   # base images of the orchestrator Dockerfile
+    schedule:
+      interval: weekly
+    groups:
+      # The JDK and JRE images move together: the jar is built and run on the same Java release.
+      temurin:
+        patterns: ["eclipse-temurin"]

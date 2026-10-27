@@ -15,8 +15,8 @@ Milestones after v0.1.0 are a draft and will be refined as each one starts.
 | v0.1.0 — Foundations | Final Docker Compose infrastructure (Camunda, MongoDB, `mongot`), orchestrator skeleton, inventory module ([ADR 0022](adr/0022-inventory-data-model.md)) | — | Done |
 | v0.2.0 — Demand and forecasting | Sales dataset and seed, forecasting service, nightly forecast batch ([ADR 0006](adr/0006-precomputed-forecast-with-on-demand-recompute.md)) | R1, R2, R3, R4 | Draft |
 | v0.3.0 — Supplier knowledge | Synthetic supplier documents consistent with the dataset, retrieval over MongoDB Vector Search | R6 (retrieval references) | Draft |
-| v0.4.0 — Agentic replenishment | Agent process with tools, DMN approval policy, planner approval in the frontend; `LLM_API_KEY` required again in Compose | R5, R6 | Draft |
-| v0.5.0 — Demo-ready MVP | Supplier-delay re-evaluation, agent evaluation set, measured success indicators | R7, R8 | Draft |
+| v0.4.0 — Agentic replenishment | Agent process with tools, DMN approval policy, planner approval in the frontend; orders issued to the simulated ERP; `LLM_API_KEY` required again in Compose | R5, R6, R9 (orders and answers), R10 | Draft |
+| v0.5.0 — Demo-ready MVP | Supplier-delay re-evaluation, deliveries and simulated time, agent evaluation set, measured success indicators | R7, R8, R9 (deliveries, time, replay) | Draft |
 
 ## Requirements
 
@@ -96,6 +96,30 @@ Each requirement states what must be true, not how to build it. The delegation l
   rejected. Forecast accuracy comes from R2.
 - **Level:** 🟡 design gate.
 
+### R9 — The simulated ERP closes the loop
+
+- **Why:** stock-out days and inventory held (R8) only exist if orders turn into deliveries, and a supplier delay is
+  only credible once the order has been issued, as in real life.
+- **What:** approved orders are issued to a simulated ERP outside the process, which answers asynchronously with
+  confirmations, delays and deliveries, partial ones included. The answers look random but are reproducible: they
+  come from a supplier-reliability calendar generated from a seed, so the same seed reproduces the same run, and
+  Provisio and the baseline policy of R8 face the same world even though they issue different orders. Deliveries
+  become inventory movements ([ADR 0022](adr/0022-inventory-data-model.md)). Simulated time can be advanced, so a
+  past period is replayed in minutes. Switching supplier after an order was issued cancels the original order.
+- **Time:** spike 003 decides how simulated time drives the process engine (for example the engine clock API, which
+  is alpha) before the v0.5.0 design starts. Until then, the v0.4.0 process should not rely on engine timers for
+  waits measured in days, or it may need rework.
+- **Level:** 🟡 design gate (ERP contract, reliability calendar, simulated time); the BPMN part is 🔴.
+
+### R10 — The agent can check a supplier before ordering
+
+- **Why:** a planner does not order blindly from a supplier that is often late.
+- **What:** the agent can read a supplier's historical reliability (late-delivery share, average delay) from a
+  synthetic order history generated with the R9 seed and, when it is poor, ask the supplier for a lead-time estimate.
+  The estimate can be wrong; it is recorded in the proposal's rationale and audit record (R6). The actual delay is
+  only known after the order is issued (R9).
+- **Level:** 🟡 design gate (tool contracts); the agent prompt and the BPMN part are 🔴.
+
 ## Before the repository goes public
 
 The repository is private today. It goes public when the following hold, regardless of milestone:
@@ -105,10 +129,11 @@ The repository is private today. It goes public when the following hold, regardl
 - [ ] CI is green on `main`; the history passes secret scanning and the identity allow-list.
 - [ ] No data is committed whose license has not been verified (see R4).
 - [ ] Docker images are published on version tags and the Compose file pulls them ([ADR 0024](adr/0024-image-publication-when-public.md)).
-- [ ] Simplifications and known limits are stated ([ADR 0002](adr/0002-domain-and-mvp-scope.md),
+- [x] Simplifications and known limits are stated ([README](../README.md#simplifications),
       [AI diligence statement](../AI-DILIGENCE.md#known-limits)).
-- [ ] Dependabot covers every ecosystem in the repository (GitHub Actions, Maven, Docker), and a security policy says
-      how to report a vulnerability.
+- [x] Dependabot covers every ecosystem in the repository, with documented exceptions (Compose images and Camunda,
+      upgraded together by hand: see `.github/dependabot.yml`), and a [security policy](../SECURITY.md) says how to
+      report a vulnerability.
 
 On the day it goes public, in the repository settings:
 
