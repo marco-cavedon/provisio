@@ -7,7 +7,7 @@ repository root with `docker compose up -d`.
 | --- | --- | --- | --- |
 | `orchestration` | `camunda/camunda:8.9.23` | Zeebe, Operate, Tasklist; H2 secondary storage | 8080, 26500, 9600 |
 | `connectors` | `camunda/connectors-bundle:8.9.14` | Connectors runtime, including the AI Agent connector | — |
-| `mongodb` | `mongodb/mongodb-community-server:9.0.2-ubi8` | Single-node replica set `rs0` | 27017 |
+| `mongodb` | `mongodb/mongodb-community-server:9.0.2-ubuntu2204` | Single-node replica set `rs0` | 27017 |
 | `mongot` | `mongodb/mongodb-community-search:1.70.5` | MongoDB Search and Vector Search | — |
 | `orchestrator` | `ghcr.io/marco-cavedon/provisio-orchestrator:0.1.1`, or built from `../orchestrator` | Provisio job workers (agent tools); see [its README](../orchestrator/README.md) | — |
 | `camunda-data-init`, `mongodb-init` | | One-shot initialisation jobs | — |
@@ -109,6 +109,18 @@ Measured with `docker stats --no-stream` on 2026-10-08, stack idle and healthy, 
 Plan for at least **4 GiB of RAM available to Docker**: usage grows with data, indexes and process instances, and the
 orchestrator (limit 768 MiB, not yet measured) and the forecasting service add to it. `mongot` has no memory limit yet: it is a JVM, and a
 limit chosen without load data risks out-of-memory kills; it will be set once real indexes exist.
+
+## Known issues
+
+- **MongoDB on Linux kernel 6.19 and newer** ([SERVER-121912](https://jira.mongodb.org/browse/SERVER-121912)): mongod
+  8.0+ refuses to start, with "Linux kernel versions 6.19 and newer has a known incompatibility", because the per-CPU
+  caches of its TCMalloc allocator rely on `rseq`. This affects hosts such as Ubuntu 26.04. The `mongodb` service sets
+  `GLIBC_TUNABLES=glibc.pthread.rseq=1`, so glibc keeps `rseq` and TCMalloc uses per-thread caches instead: slightly
+  slower allocation, irrelevant for a local demo. The tunable exists from glibc 2.35, so the stack uses the
+  `ubuntu2204` image variant: on `ubi8` (glibc 2.28) it is ignored and mongod still refuses to start, which is why a
+  `MONGODB_VERSION` override must keep a variant with a recent glibc. It is a workaround, not a fix, and it is removed
+  once a MongoDB release solves the issue. The integration tests apply the same setting and image, and CI runs on
+  Ubuntu 26.04 to cover it.
 
 ## Troubleshooting
 

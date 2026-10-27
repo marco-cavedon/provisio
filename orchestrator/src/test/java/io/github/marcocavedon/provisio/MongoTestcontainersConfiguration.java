@@ -12,16 +12,22 @@ import org.testcontainers.utility.DockerImageName;
  * <p>Same image as the local stack (keep in sync with {@code MONGODB_VERSION} in docker-compose.yml), started as a
  * single-node replica set: multi-document transactions require one. No access control: credentials are covered by
  * the local stack verification, not by these tests.
+ *
+ * <p>{@code GLIBC_TUNABLES} is the same workaround as in docker-compose.yml for SERVER-121912: without it, mongod
+ * refuses to start on Linux kernels 6.19 and newer, such as the Ubuntu 26.04 CI runners. It needs glibc 2.35 or
+ * later, hence the ubuntu2204 image variant (ubi8 ships glibc 2.28). Remove both together.
  */
 @TestConfiguration(proxyBeanMethods = false)
 public class MongoTestcontainersConfiguration {
 
   static final DockerImageName MONGODB_IMAGE =
-      DockerImageName.parse("mongodb/mongodb-community-server:9.0.2-ubi8").asCompatibleSubstituteFor("mongo");
+      DockerImageName.parse("mongodb/mongodb-community-server:9.0.2-ubuntu2204").asCompatibleSubstituteFor("mongo");
 
   @Bean
   @ServiceConnection
   MongoDBContainer mongoDbContainer() {
-    return new MongoDBContainer(MONGODB_IMAGE).withReplicaSet();
+    return new MongoDBContainer(MONGODB_IMAGE)
+        .withReplicaSet()
+        .withEnv("GLIBC_TUNABLES", "glibc.pthread.rseq=1");
   }
 }

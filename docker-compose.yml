@@ -62,7 +62,7 @@ services:
   # ---------------------------------------------------------------- MongoDB + mongot
 
   mongodb: # single-node replica set, required by mongot (change streams); access control enabled
-    image: mongodb/mongodb-community-server:${MONGODB_VERSION:-9.0.2-ubi8}
+    image: mongodb/mongodb-community-server:${MONGODB_VERSION:-9.0.2-ubuntu2204}
     # A replica set with access control needs a keyfile for internal authentication between members.
     # With a single member nothing else reads it, so a fresh random keyfile is generated at every start:
     # nothing to store, nothing to leak. mongod requires it to be readable by its owner only.
@@ -75,6 +75,13 @@ services:
         head -c 756 /dev/urandom | base64 -w 0 > /tmp/mongod-keyfile &&
         chmod 400 /tmp/mongod-keyfile &&
         exec mongod --config /etc/mongod.conf
+    environment:
+      # Workaround for SERVER-121912: on Linux kernels 6.19 and newer, mongod 8.0+ refuses to start because the
+      # per-CPU caches of its TCMalloc rely on rseq. glibc keeps rseq, so TCMalloc falls back to per-thread caches
+      # (slightly slower allocation, irrelevant here). Remove it once a MongoDB release fixes the issue.
+      # It needs glibc 2.35 or later, hence the ubuntu2204 image variant: on the ubi8 variant (glibc 2.28) it has no
+      # effect and mongod still refuses to start.
+      GLIBC_TUNABLES: glibc.pthread.rseq=1
     ports:
       - "127.0.0.1:27017:27017"
     mem_limit: 1g
@@ -90,7 +97,7 @@ services:
       - ./infra/mongodb/scripts:/scripts:ro
 
   mongodb-init: # one-shot and idempotent: replica set + users (admin, mongot, provisio)
-    image: mongodb/mongodb-community-server:${MONGODB_VERSION:-9.0.2-ubi8}
+    image: mongodb/mongodb-community-server:${MONGODB_VERSION:-9.0.2-ubuntu2204}
     # Shares mongod's network namespace, so it connects through localhost: the first user can only be
     # created through the localhost exception, which does not apply to connections over the Compose network.
     network_mode: "service:mongodb"

@@ -31,6 +31,7 @@ jobs:
               - 'orchestrator/**'
               - 'mise.toml'
               - '.github/workflows/orchestrator.yml'
+              - 'docker-compose.yml'
             image:
               - 'orchestrator/**'
               - 'docker-compose.yml'
@@ -41,7 +42,10 @@ jobs:
     name: Build and test
     needs: changes
     if: needs.changes.outputs.orchestrator == 'true'
-    runs-on: ubuntu-latest
+    # Pinned rather than ubuntu-latest: the tests start mongod, which needs a workaround on the Linux 6.19+ kernel of
+    # Ubuntu 26.04 (SERVER-121912). A pinned label tests that case every time, instead of depending on which image
+    # the runner pool happens to assign during the ubuntu-latest migration.
+    runs-on: ubuntu-26.04
     defaults:
       run:
         working-directory: orchestrator
@@ -67,7 +71,7 @@ jobs:
     name: Docker image
     needs: changes
     if: needs.changes.outputs.image == 'true'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04   # see the build job
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
@@ -98,3 +102,15 @@ jobs:
           docker compose up --no-start --no-deps orchestrator
           docker image inspect --format '{{.Id}}' "ghcr.io/marco-cavedon/provisio-orchestrator:${PROVISIO_VERSION}"
           docker compose down
+
+      # The Compose mongod must start on this kernel (SERVER-121912 workaround in docker-compose.yml)
+      - name: Check that the Compose MongoDB starts
+        env:
+          MONGOT_PASSWORD: ci
+          MONGODB_ADMIN_PASSWORD: ci
+          MONGODB_APP_PASSWORD: ci
+        run: |
+          uname -r
+          docker compose up --detach --wait --wait-timeout 120 --no-deps mongodb \
+            || { docker compose logs mongodb; exit 1; }
+          docker compose down --volumes
