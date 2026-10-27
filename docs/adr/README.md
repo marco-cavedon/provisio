@@ -28,5 +28,6 @@ ADRs are immutable once accepted: a changed decision gets a **new** ADR that sup
 | [0021](0021-agent-delegation-model.md) | Delegation model for AI-assisted development | Accepted |
 | [0022](0022-inventory-data-model.md) | Inventory data model: movement ledger with stock snapshot | Accepted |
 | [0023](0023-mongodb-access-control.md) | MongoDB access control enabled, least-privilege users | Accepted |
+| [0024](0024-image-publication-when-public.md) | Docker images are published once the repository is public | Accepted |
 
 New ADRs start from [`template.md`](template.md).
