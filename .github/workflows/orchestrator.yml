@@ -103,8 +103,11 @@ jobs:
           docker image inspect --format '{{.Id}}' "ghcr.io/marco-cavedon/provisio-orchestrator:${PROVISIO_VERSION}"
           docker compose down
 
-      # The Compose mongod must start on this kernel (SERVER-121912 workaround in docker-compose.yml)
-      - name: Check that the Compose MongoDB starts
+      # A fresh clone's first start, for the MongoDB part: mongod must start on this kernel (SERVER-121912 workaround in
+      # docker-compose.yml), and mongodb-init must initiate the replica set and create the users from an empty volume.
+      # It runs twice, because the second run takes the other path: the localhost exception is closed, so it
+      # authenticates as admin and updates the users.
+      - name: Check that the Compose MongoDB starts and initialises
         env:
           MONGOT_PASSWORD: ci
           MONGODB_ADMIN_PASSWORD: ci
@@ -113,4 +116,10 @@ jobs:
           uname -r
           docker compose up --detach --wait --wait-timeout 120 --no-deps mongodb \
             || { docker compose logs mongodb; exit 1; }
+          for run in first second; do
+            docker compose up --detach --no-deps --force-recreate mongodb-init
+            code=$(docker wait "$(docker compose ps --all --quiet mongodb-init)")
+            docker compose logs --no-log-prefix mongodb-init
+            [[ "$code" == "0" ]] || { echo "::error::mongodb-init failed on the $run run (exit $code)"; exit 1; }
+          done
           docker compose down --volumes

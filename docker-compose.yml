@@ -63,6 +63,10 @@ services:
 
   mongodb: # single-node replica set, required by mongot (change streams); access control enabled
     image: mongodb/mongodb-community-server:${MONGODB_VERSION:-9.0.2-ubuntu2204}
+    # The replica set member is mongodb:27017 (infra/mongodb/init). rs.initiate succeeds only if mongod recognises that
+    # name as itself; with the container hostname equal to the member name it does, without relying on how the image
+    # resolves Docker's DNS alias (the ubuntu2204 image does not, the ubi8 one did).
+    hostname: mongodb
     # A replica set with access control needs a keyfile for internal authentication between members.
     # With a single member nothing else reads it, so a fresh random keyfile is generated at every start:
     # nothing to store, nothing to leak. mongod requires it to be readable by its owner only.
