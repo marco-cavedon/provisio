@@ -61,6 +61,22 @@ in one transaction ([ADR 0022](../docs/adr/0022-inventory-data-model.md)). Other
 
 ## Run
 
+### In Docker Compose
+
+`docker compose up -d` in the repository root builds the image (`Dockerfile`) and starts the orchestrator with the
+rest of the stack. After a code change, rebuild it with `docker compose up -d --build orchestrator`; follow it with
+`docker compose logs -f orchestrator`.
+
+The image is built in three stages: the jar with the Maven Wrapper (tests skipped: they need Docker and run in CI),
+then Spring Boot's layer extraction, then a JRE image running as a non-root user. Inside the Compose network the
+orchestrator connects to the replica set `rs0` through the service name `mongodb`. It has no host port and no
+healthcheck yet: both come with the BFF.
+
+### On the host, for development
+
+Stop the container first, or two orchestrators compete for the same jobs: `docker compose stop orchestrator`.
+`run-local.sh` refuses to start while the container is running; the IDE does not check, so stop it by hand there too.
+
 Requires the local stack running (`docker compose up -d` in the repository root): Camunda on ports 26500 and 8080,
 MongoDB on port 27017.
 
@@ -75,7 +91,8 @@ orchestrator/run-local.sh            # extra arguments are passed to spring-boot
 ```
 
 The script exports from `.env` only the variables listed in its `REQUIRED_VARS` (today `MONGODB_APP_PASSWORD`),
-parsing the file rather than sourcing it, checks that `mongodb` and `orchestration` are healthy, then runs
+parsing the file rather than sourcing it, checks that `mongodb` and `orchestration` are healthy and that the
+orchestrator container is not running, then runs
 `./mvnw spring-boot:run`. When `application.yaml` starts reading a new environment variable, add it to `REQUIRED_VARS`.
 
 Without the script, pass the variable explicitly from the `orchestrator` directory:
@@ -96,7 +113,8 @@ orchestrator/stop-local.sh
 ```
 
 The script stops everything in order: first the orchestrator on the host, whether started by `run-local.sh` or by
-the IDE, with SIGTERM so Spring shuts down gracefully (up to 30 seconds); then the stack with `docker compose down`.
+the IDE, with SIGTERM so Spring shuts down gracefully (up to 30 seconds); then the stack with `docker compose down`,
+including the orchestrator container.
 Containers and network are removed, **volumes are kept**, so Camunda and MongoDB data survive. If the orchestrator
 does not stop in time, the script leaves the stack running and exits with an error.
 

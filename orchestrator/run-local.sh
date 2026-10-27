@@ -5,7 +5,8 @@
 #
 # It exports from .env only the variables the orchestrator needs (REQUIRED_VARS), never the whole file:
 # .env also holds credentials the orchestrator must not see. The file is parsed, not sourced, so nothing in it is
-# executed. Before starting, it checks that the services the orchestrator depends on are healthy.
+# executed. Before starting, it checks that the services the orchestrator depends on are healthy and that the
+# orchestrator is not already running in Docker Compose.
 set -euo pipefail
 
 # Variables the orchestrator reads from the environment. Add a name here when application.yaml needs a new one.
@@ -58,6 +59,11 @@ for service in "${REQUIRED_SERVICES[@]}"; do
     *) fail "service '$service' is not healthy (status: ${health:-not running}). Start the stack from $ROOT_DIR: docker compose up -d" ;;
   esac
 done
+
+# Two orchestrators would compete for the same jobs, and a job could run in the container instead of in this code.
+if [[ -n "$(docker compose --project-directory "$ROOT_DIR" ps --status running --quiet orchestrator 2> /dev/null || true)" ]]; then
+  fail "the orchestrator is already running in Docker Compose. Stop it first: docker compose stop orchestrator"
+fi
 
 # 3. Run
 echo "run-local: stack healthy, starting the orchestrator (variables from .env: ${REQUIRED_VARS[*]})"

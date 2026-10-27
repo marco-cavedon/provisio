@@ -1,5 +1,5 @@
 # Provisio — local runtime (ADR 0007). One command: `docker compose up -d`.
-# Step 1 of v0.1.0: infrastructure only (Camunda 8.9 + MongoDB with Search / Vector Search).
+# Camunda 8.9, MongoDB with Search / Vector Search, and the Provisio orchestrator.
 # Every host port is bound to 127.0.0.1: nothing is exposed beyond this machine.
 name: provisio
 
@@ -133,6 +133,29 @@ services:
     depends_on:
       mongodb-init:
         condition: service_completed_successfully
+
+  # ---------------------------------------------------------------- Provisio
+
+  orchestrator: # job workers (agent tools) and, later, the BFF; built from ./orchestrator
+    build: ./orchestrator
+    image: provisio-orchestrator:local
+    environment:
+      # Inside the Compose network the replica set member name mongodb:27017 resolves, so the driver connects to the
+      # replica set (from the host, application.yaml connects directly to localhost instead)
+      SPRING_MONGODB_HOST: mongodb
+      SPRING_MONGODB_REPLICASETNAME: rs0
+      MONGODB_APP_PASSWORD: ${MONGODB_APP_PASSWORD:?MONGODB_APP_PASSWORD is not set, see .env.example}
+      CAMUNDA_CLIENT_GRPCADDRESS: http://orchestration:26500
+      CAMUNDA_CLIENT_RESTADDRESS: http://orchestration:8080
+    # No host port: the orchestrator only makes outbound connections. No healthcheck until it has an HTTP endpoint
+    # (the BFF); nothing depends on it.
+    mem_limit: 768m
+    restart: on-failure
+    depends_on:
+      mongodb-init:
+        condition: service_completed_successfully
+      orchestration:
+        condition: service_healthy
 
 volumes:
   camunda:
