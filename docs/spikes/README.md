@@ -7,3 +7,4 @@ hypothesis, success criteria and outcome; the outcome may confirm or supersede a
 | --- | --- | --- |
 | [001](001-llm-provider-and-ai-agent-connector.md) | LLM provider and AI Agent connector | Completed |
 | 002 | LLM forecast versus statistical baseline ([roadmap R3](../roadmap.md#r3--spike-002-llm-forecast-versus-statistical-baseline)) | Planned |
+| 003 | Simulated time and the process engine ([roadmap R9](../roadmap.md#r9--the-simulated-erp-closes-the-loop)) | Planned (v0.5.0) |

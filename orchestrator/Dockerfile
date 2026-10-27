@@ -8,9 +8,12 @@
 # Multi-platform (linux/amd64, linux/arm64; release workflow): the jar is platform-independent bytecode, so the build
 # and extract stages run once on the builder's native platform ($BUILDPLATFORM). Only the runtime stage is built per
 # target platform, and its only RUN step is the user creation, so emulation never runs Maven.
+#
+# Base images are pinned to an exact Temurin release and Ubuntu base, so the same Dockerfile builds the same image
+# over time; Dependabot proposes the updates (.github/dependabot.yml). All three stages use the same release.
 
 # ---------------------------------------------------------------- build
-FROM --platform=$BUILDPLATFORM eclipse-temurin:21-jdk AS build
+FROM --platform=$BUILDPLATFORM eclipse-temurin:21.0.12.1_1-jdk-resolute AS build
 WORKDIR /workspace
 
 COPY mvnw pom.xml ./
@@ -24,13 +27,13 @@ RUN --mount=type=cache,target=/root/.m2 \
     && cp target/provisio-orchestrator-*.jar application.jar
 
 # ---------------------------------------------------------------- extract layers
-FROM --platform=$BUILDPLATFORM eclipse-temurin:21-jre AS extract
+FROM --platform=$BUILDPLATFORM eclipse-temurin:21.0.12.1_1-jre-resolute AS extract
 WORKDIR /extract
 COPY --from=build /workspace/application.jar application.jar
 RUN java -Djarmode=tools -jar application.jar extract --layers --launcher --destination layers
 
 # ---------------------------------------------------------------- runtime
-FROM eclipse-temurin:21-jre
+FROM eclipse-temurin:21.0.12.1_1-jre-resolute
 RUN groupadd --system --gid 10001 provisio \
     && useradd --system --uid 10001 --gid provisio --no-create-home provisio
 WORKDIR /application
