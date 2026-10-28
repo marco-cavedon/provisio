@@ -59,7 +59,8 @@ Each requirement states what must be true, not how to build it. The delegation l
   whether the demo still starts with a single `docker compose up`.
 - **What:** a dataset is selected for a single product category, its license is verified for redistribution
   (or the seed downloads it without personal credentials), and the decision is recorded in an ADR.
-  The M5 (Walmart) dataset is the leading candidate; its license has **not** been verified yet.
+- **Decided:** Online Retail II (UCI, CC BY 4.0), with the bags category, daily granularity on open days, three
+  disjoint periods and an explicit business date ([ADR 0025](adr/0025-sales-dataset-and-business-time.md)).
 - **Level:** 🟡 design gate.
 
 ### R5 — Rejection is a first-class outcome
