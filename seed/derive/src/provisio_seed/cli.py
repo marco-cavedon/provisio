@@ -32,6 +32,9 @@ SHEETS = ("Year 2009-2010", "Year 2010-2011")
 
 DERIVE_DIR = Path(__file__).resolve().parents[2]
 SKU_LIST = DERIVE_DIR / "bags-skus.csv"
+# Product master data for inventory (ADR 0022): every curated product belongs to the category and is counted in units
+CATEGORY = "BAGS"
+UNIT = "EA"
 DEFAULT_OUT = DERIVE_DIR.parent / "data" / "online-retail-ii"
 
 
@@ -71,7 +74,7 @@ def derive(first: pd.DataFrame, second: pd.DataFrame, skus: pd.DataFrame) -> dic
         "calendar.csv": to_csv(
             calendar.assign(day=calendar["day"].dt.strftime("%Y-%m-%d"), open=calendar["open"].map(str).str.lower())
         ),
-        "skus.csv": to_csv(skus.sort_values("sku", ignore_index=True)),
+        "skus.csv": to_csv(skus.sort_values("sku", ignore_index=True).assign(category=CATEGORY, unit=UNIT)),
     }
     manifest = {
         "dataset": "online-retail-ii",

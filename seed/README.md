@@ -19,7 +19,7 @@ CC BY 4.0; attribution in [`NOTICE`](../NOTICE)). The choice of dataset and the 
 | --- | --- |
 | `daily-demand.csv` | `sku`, `day`, `quantity`: demand per product and day, on days with sales only |
 | `calendar.csv` | `day`, `open`: every calendar day from 1 December 2009 to 8 December 2011 |
-| `skus.csv` | `sku`, `description`: the products of the category |
+| `skus.csv` | `sku`, `description`, `category`, `unit`: the products of the category, all `BAGS` counted in `EA` |
 | `manifest.json` | Source checksum, periods, summary figures, checksum and row count of every file |
 
 A product with no row for an open day sold nothing that day. A closed day is not a zero: the store was not trading.

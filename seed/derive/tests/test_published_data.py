@@ -22,7 +22,10 @@ def test_files_match_the_manifest():
 
 
 def test_published_products_are_the_curated_list():
-    assert [r["sku"] for r in rows("skus.csv")] == sorted(read_sku_list()["sku"])
+    products = rows("skus.csv")
+    assert [r["sku"] for r in products] == sorted(read_sku_list()["sku"])
+    assert list(products[0]) == ["sku", "description", "category", "unit"]
+    assert {(r["category"], r["unit"]) for r in products} == {("BAGS", "EA")}
 
 
 def test_demand_falls_on_open_days_and_is_positive():
