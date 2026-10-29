@@ -4,7 +4,9 @@ Demo data for Provisio. Today it holds the demand history; synthetic supplier do
 with v0.3.0 ([roadmap](../docs/roadmap.md)).
 
 Nothing in this folder writes to MongoDB. Only the Spring application writes to the database
-([ADR 0006](../docs/adr/0006-precomputed-forecast-with-on-demand-recompute.md)): it reads these files as input.
+([ADR 0006](../docs/adr/0006-precomputed-forecast-with-on-demand-recompute.md)): its seed module loads these files at
+startup, if they are not loaded already ([ADR 0026](../docs/adr/0026-demand-module-and-seed-loading.md)). Docker
+Compose mounts `data/` read-only into the orchestrator.
 
 ## Demand history
 
