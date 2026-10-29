@@ -7,6 +7,10 @@ import io.github.marcocavedon.provisio.MongoTestcontainersConfiguration;
 import io.github.marcocavedon.provisio.demand.DailyDemand;
 import io.github.marcocavedon.provisio.demand.DemandImport;
 import io.github.marcocavedon.provisio.demand.DemandQueries;
+import io.github.marcocavedon.provisio.inventory.InventoryOperations;
+import io.github.marcocavedon.provisio.inventory.InventoryQueries;
+import io.github.marcocavedon.provisio.inventory.Product;
+import io.github.marcocavedon.provisio.inventory.StockLevel;
 import io.github.marcocavedon.provisio.seed.internal.SeedLoader.Outcome;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -52,6 +56,12 @@ class SeedLoaderTests {
   private DemandQueries demandQueries;
 
   @Autowired
+  private InventoryOperations inventoryOperations;
+
+  @Autowired
+  private InventoryQueries inventoryQueries;
+
+  @Autowired
   private PlatformTransactionManager transactionManager;
 
   @TempDir
@@ -59,7 +69,8 @@ class SeedLoaderTests {
 
   @BeforeEach
   void setUp() {
-    for (String collection : new String[] {"demand_history", "business_calendar", SeedLoadDocument.COLLECTION}) {
+    for (String collection : new String[] {"demand_history", "business_calendar", SeedLoadDocument.COLLECTION,
+        "products", "stock_movements", "stock_levels"}) {
       mongoTemplate.remove(new Query(), collection);
     }
   }
@@ -77,7 +88,9 @@ class SeedLoaderTests {
     SeedLoadDocument record = mongoTemplate.findById("test-dataset", SeedLoadDocument.class);
     assertThat(record).isNotNull();
     assertThat(record.manifestSha256()).isEqualTo(SeedManifest.sha256(Files.readAllBytes(dir.resolve("manifest.json"))));
-    assertThat(record.rows()).isEqualTo(4 + 2);
+    assertThat(record.rows()).isEqualTo(2 + 4 + 2);
+    assertThat(inventoryQueries.findProduct("A")).contains(new Product("A", "BAG A", "BAGS", "EA"));
+    assertThat(inventoryQueries.findStockLevel("B")).contains(new StockLevel("B", 0, null));
     assertThat(record.loadedAt()).isNotNull();
   }
 
@@ -93,9 +106,12 @@ class SeedLoaderTests {
   void changedManifestReplacesTheData() throws IOException {
     writeDataset("A,2011-01-03,5\nB,2011-01-03,1\n");
     loader(dir).load();
-    writeDataset("A,2011-01-04,9\n");
+    writeDataset("A,2011-01-04,9\n", "A,BAG A RENAMED,BAGS,EA\n");
 
     assertThat(loader(dir).load()).isEqualTo(Outcome.LOADED);
+    assertThat(inventoryQueries.findProduct("A")).map(Product::name).contains("BAG A RENAMED");
+    // Dropped from the seed, but never deleted (ADR 0027)
+    assertThat(inventoryQueries.findProduct("B")).isPresent();
     assertThat(demandQueries.dailyDemand("A", LocalDate.of(2011, 1, 3), LocalDate.of(2011, 1, 5)))
         .extracting(DailyDemand::quantity).containsExactly(0, 9);
     assertThat(demandQueries.dailyDemand("B", LocalDate.of(2011, 1, 3), LocalDate.of(2011, 1, 4)))
@@ -127,7 +143,7 @@ class SeedLoaderTests {
   void dataAndRecordAreWrittenInOneTransaction() throws IOException {
     writeDataset("A,2011-01-03,5\n");
     loader(dir).load();
-    writeDataset("A,2011-01-03,8\n");
+    writeDataset("A,2011-01-03,8\n", "A,BAG A,BAGS,EA\nC,BAG C,BAGS,EA\n");
 
     // The loader joins an enclosing transaction: if it rolls back, neither the data nor the record change
     assertThatThrownBy(() -> new TransactionTemplate(transactionManager).executeWithoutResult(status -> {
@@ -137,12 +153,19 @@ class SeedLoaderTests {
 
     assertThat(demandQueries.dailyDemand("A", LocalDate.of(2011, 1, 3), LocalDate.of(2011, 1, 4)))
         .extracting(DailyDemand::quantity).containsExactly(5);
+    assertThat(inventoryQueries.findProduct("C")).isEmpty();
     assertThat(loader(dir).load()).isEqualTo(Outcome.LOADED);
+    assertThat(inventoryQueries.findProduct("C")).isPresent();
   }
 
   @Test
   void loadsTheCommittedDataset() {
     assertThat(loader(COMMITTED_SEED).load()).isEqualTo(Outcome.LOADED);
+
+    assertThat(mongoTemplate.getCollection("products").countDocuments()).isEqualTo(54);
+    assertThat(inventoryQueries.findProduct("85099B"))
+        .contains(new Product("85099B", "JUMBO BAG RED RETROSPOT", "BAGS", "EA"));
+    assertThat(inventoryQueries.findStockLevel("85099B")).map(StockLevel::onHand).contains(0);
 
     var calendar = demandQueries.calendar().orElseThrow();
     assertThat(calendar.from()).isEqualTo(LocalDate.of(2009, 12, 1));
@@ -158,17 +181,22 @@ class SeedLoaderTests {
   }
 
   private SeedLoader loader(Path datasetDir) {
-    return new SeedLoader(datasetDir, mongoTemplate, demandImport, transactionManager);
+    return new SeedLoader(datasetDir, mongoTemplate, demandImport, inventoryOperations, transactionManager);
+  }
+
+  private void writeDataset(String demandRows) throws IOException {
+    writeDataset(demandRows, "A,BAG A,BAGS,EA\nB,BAG B,BAGS,EA\n");
   }
 
   /**
-   * Writes a dataset like seed/derive does: calendar 2011-01-03..2011-01-06 (all open), the given demand rows, and a
-   * manifest with their checksums.
+   * Writes a dataset like seed/derive does: calendar 2011-01-03..2011-01-06 (all open), the given demand and product
+   * rows, and a manifest with their checksums.
    */
-  private void writeDataset(String demandRows) throws IOException {
+  private void writeDataset(String demandRows, String productRows) throws IOException {
     Map<String, String> files = new LinkedHashMap<>();
     files.put("calendar.csv", "day,open\n2011-01-03,true\n2011-01-04,true\n2011-01-05,true\n2011-01-06,true\n");
     files.put("daily-demand.csv", "sku,day,quantity\n" + demandRows);
+    files.put("skus.csv", "sku,description,category,unit\n" + productRows);
     StringBuilder listed = new StringBuilder();
     for (var file : files.entrySet()) {
       byte[] content = file.getValue().getBytes(StandardCharsets.UTF_8);

@@ -2,7 +2,6 @@ package io.github.marcocavedon.provisio.seed.internal;
 
 import io.github.marcocavedon.provisio.demand.BusinessCalendar;
 import io.github.marcocavedon.provisio.demand.DemandEntry;
-import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -12,8 +11,7 @@ import java.util.Set;
 /**
  * The demand part of a dataset: {@code calendar.csv} and {@code daily-demand.csv}, as written by {@code seed/derive}.
  *
- * <p>The files are machine-written with a fixed header and no quoting, and their checksums have been verified, so a
- * plain split is enough; anything unexpected is an error, not something to recover from.
+ * <p>Parsed with {@link SeedManifest#csvRows}: anything unexpected is an error, not something to recover from.
  */
 record DemandSeed(BusinessCalendar calendar, List<DemandEntry> entries) {
 
@@ -21,7 +19,7 @@ record DemandSeed(BusinessCalendar calendar, List<DemandEntry> entries) {
   static final String DAILY_DEMAND = "daily-demand.csv";
 
   static DemandSeed from(SeedManifest manifest) {
-    List<String[]> days = rows(manifest, CALENDAR, "day,open");
+    List<String[]> days = manifest.csvRows(CALENDAR, "day,open");
     if (days.isEmpty()) {
       throw new IllegalStateException(CALENDAR + " is empty");
     }
@@ -41,7 +39,7 @@ record DemandSeed(BusinessCalendar calendar, List<DemandEntry> entries) {
     BusinessCalendar calendar = new BusinessCalendar(from, to, closed);
 
     List<DemandEntry> entries = new ArrayList<>();
-    for (String[] row : rows(manifest, DAILY_DEMAND, "sku,day,quantity")) {
+    for (String[] row : manifest.csvRows(DAILY_DEMAND, "sku,day,quantity")) {
       entries.add(new DemandEntry(row[0], LocalDate.parse(row[1]), Integer.parseInt(row[2])));
     }
     return new DemandSeed(calendar, List.copyOf(entries));
@@ -49,22 +47,5 @@ record DemandSeed(BusinessCalendar calendar, List<DemandEntry> entries) {
 
   int rows() {
     return (int) (calendar.from().datesUntil(calendar.to().plusDays(1)).count() + entries.size());
-  }
-
-  private static List<String[]> rows(SeedManifest manifest, String file, String header) {
-    String[] lines = new String(manifest.file(file), StandardCharsets.UTF_8).split("\n");
-    if (!lines[0].equals(header)) {
-      throw new IllegalStateException(file + ": expected header '" + header + "', found '" + lines[0] + "'");
-    }
-    int columns = header.split(",").length;
-    List<String[]> rows = new ArrayList<>(lines.length - 1);
-    for (int i = 1; i < lines.length; i++) {
-      String[] row = lines[i].split(",", -1);
-      if (row.length != columns) {
-        throw new IllegalStateException(file + " line " + (i + 1) + ": expected " + columns + " columns");
-      }
-      rows.add(row);
-    }
-    return rows;
   }
 }

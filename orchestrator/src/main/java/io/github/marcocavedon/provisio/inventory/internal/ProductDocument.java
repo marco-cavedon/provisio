@@ -20,6 +20,10 @@ public record ProductDocument(
 
   public static final String COLLECTION = "products";
 
+  static ProductDocument from(Product product) {
+    return new ProductDocument(product.sku(), product.name(), product.category(), product.unit());
+  }
+
   Product toProduct() {
     return new Product(sku, name, category, unit);
   }

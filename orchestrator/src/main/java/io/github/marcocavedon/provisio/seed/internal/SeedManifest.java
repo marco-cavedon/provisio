@@ -8,8 +8,10 @@ import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.ArrayList;
 import java.util.HexFormat;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import org.bson.Document;
 
@@ -66,6 +68,30 @@ record SeedManifest(String dataset, String sha256, Map<String, byte[]> files) {
       throw new IllegalStateException("The manifest of dataset " + dataset + " does not list " + name);
     }
     return content;
+  }
+
+  /**
+   * Data rows of a CSV file listed in the manifest, after checking its header.
+   *
+   * <p>The files are machine-written by {@code seed/derive} with a fixed header and no quoting, and their checksums
+   * have been verified, so a plain split is enough. A description containing a comma would need quoting: the
+   * derivation would have to change first, and the column count check below would catch it.
+   */
+  List<String[]> csvRows(String name, String header) {
+    String[] lines = new String(file(name), StandardCharsets.UTF_8).split("\n");
+    if (!lines[0].equals(header)) {
+      throw new IllegalStateException(name + ": expected header '" + header + "', found '" + lines[0] + "'");
+    }
+    int columns = header.split(",").length;
+    List<String[]> rows = new ArrayList<>(lines.length - 1);
+    for (int i = 1; i < lines.length; i++) {
+      String[] row = lines[i].split(",", -1);
+      if (row.length != columns) {
+        throw new IllegalStateException(name + " line " + (i + 1) + ": expected " + columns + " columns");
+      }
+      rows.add(row);
+    }
+    return rows;
   }
 
   private static byte[] readFile(Path path) {
