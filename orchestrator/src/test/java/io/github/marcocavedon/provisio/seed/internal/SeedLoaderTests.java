@@ -72,6 +72,7 @@ class SeedLoaderTests {
 
     assertThat(demandQueries.dailyDemand("A", LocalDate.of(2011, 1, 3), LocalDate.of(2011, 1, 6))).containsExactly(
         new DailyDemand(LocalDate.of(2011, 1, 3), 5),
+        new DailyDemand(LocalDate.of(2011, 1, 4), 0),
         new DailyDemand(LocalDate.of(2011, 1, 5), 2));
     SeedLoadDocument record = mongoTemplate.findById("test-dataset", SeedLoadDocument.class);
     assertThat(record).isNotNull();
@@ -148,10 +149,12 @@ class SeedLoaderTests {
     assertThat(calendar.to()).isEqualTo(LocalDate.of(2011, 12, 8));
     assertThat(calendar.closedDays()).hasSize(135);
     assertThat(mongoTemplate.getCollection("business_calendar").countDocuments()).isEqualTo(3);
-    // Every series covers the open days only: Saturdays are closed
+    // Every series covers the open days only. Saturdays are almost all closed, but not all: the store traded on
+    // Saturday 5 December 2009, so the check is against the calendar, not the day of the week.
     assertThat(demandQueries.dailyDemand("85099B", calendar.from(), calendar.to().plusDays(1)))
         .hasSize(603)
-        .noneMatch(day -> day.day().getDayOfWeek() == java.time.DayOfWeek.SATURDAY);
+        .allMatch(day -> calendar.isOpen(day.day()))
+        .anyMatch(day -> day.day().equals(LocalDate.of(2009, 12, 5)));
   }
 
   private SeedLoader loader(Path datasetDir) {
