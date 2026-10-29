@@ -31,5 +31,6 @@ ADRs are immutable once accepted: a changed decision gets a **new** ADR that sup
 | [0024](0024-image-publication-when-public.md) | Docker images are published once the repository is public | Accepted |
 | [0025](0025-sales-dataset-and-business-time.md) | Sales dataset, demand derivation and business time | Accepted |
 | [0026](0026-demand-module-and-seed-loading.md) | Demand data model and seed loading | Accepted |
+| [0027](0027-products-from-the-seed-are-never-deleted.md) | Products from the seed are registered, never deleted | Accepted |
 
 New ADRs start from [`template.md`](template.md).

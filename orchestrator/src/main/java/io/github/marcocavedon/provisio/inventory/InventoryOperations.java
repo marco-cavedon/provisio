@@ -1,5 +1,7 @@
 package io.github.marcocavedon.provisio.inventory;
 
+import java.util.List;
+
 /**
  * Write side of the inventory module. The only way to change stock: the snapshot is never written directly.
  */
@@ -18,4 +20,14 @@ public interface InventoryOperations {
    *     persist after the bounded retries
    */
   MovementResult recordMovement(RecordMovement command);
+
+  /**
+   * Inserts new products and updates the name, category and unit of existing ones; never deletes (ADR 0027).
+   *
+   * <p>The whole input is validated before anything is written. Runs in a transaction, joining the caller's if there
+   * is one: the seed registers products in the same transaction as the rest of its data.
+   *
+   * @throws IllegalArgumentException if a field is blank or a SKU is repeated
+   */
+  ProductRegistration registerProducts(List<Product> products);
 }

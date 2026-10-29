@@ -6,7 +6,8 @@
  *
  * <ul>
  *   <li>{@link io.github.marcocavedon.provisio.inventory.InventoryQueries} to read stock levels and products;</li>
- *   <li>{@link io.github.marcocavedon.provisio.inventory.InventoryOperations} to record a movement.</li>
+ *   <li>{@link io.github.marcocavedon.provisio.inventory.InventoryOperations} to record a movement and to register
+ *       products (inserted or updated, never deleted: ADR 0027).</li>
  * </ul>
  *
  * <p>Documents, repositories and index definitions live in internal sub-packages, hidden by Spring Modulith.

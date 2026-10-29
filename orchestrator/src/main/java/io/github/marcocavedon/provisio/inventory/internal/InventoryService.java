@@ -10,14 +10,20 @@ import io.github.marcocavedon.provisio.inventory.InventoryQueries;
 import io.github.marcocavedon.provisio.inventory.MovementResult;
 import io.github.marcocavedon.provisio.inventory.MovementResult.Reason;
 import io.github.marcocavedon.provisio.inventory.Product;
+import io.github.marcocavedon.provisio.inventory.ProductRegistration;
 import io.github.marcocavedon.provisio.inventory.RecordMovement;
 import io.github.marcocavedon.provisio.inventory.StockLevel;
 import io.github.marcocavedon.provisio.inventory.internal.TransactionRetry.ConcurrentSnapshotCreationException;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import org.bson.types.ObjectId;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.data.mongodb.core.MongoTemplate;
@@ -84,6 +90,47 @@ class InventoryService implements InventoryQueries, InventoryOperations {
     } catch (InsufficientStock insufficient) {
       return new MovementResult.Rejected(Reason.INSUFFICIENT_STOCK);
     }
+  }
+
+  @Override
+  public ProductRegistration registerProducts(List<Product> products) {
+    Objects.requireNonNull(products, "products");
+    validate(products);
+    return transaction.execute(status -> {
+      Map<String, ProductDocument> existing = new HashMap<>();
+      mongoTemplate.find(query(where("_id").in(products.stream().map(Product::sku).toList())), ProductDocument.class)
+          .forEach(product -> existing.put(product.sku(), product));
+      int inserted = 0;
+      int updated = 0;
+      for (Product product : products) {
+        ProductDocument document = ProductDocument.from(product);
+        ProductDocument current = existing.get(product.sku());
+        if (current == null) {
+          mongoTemplate.insert(document);
+          inserted++;
+        } else if (!current.equals(document)) {
+          mongoTemplate.save(document);
+          updated++;
+        }
+      }
+      return new ProductRegistration(inserted, updated, products.size() - inserted - updated);
+    });
+  }
+
+  private static void validate(List<Product> products) {
+    Set<String> skus = new HashSet<>();
+    for (Product product : products) {
+      if (isBlank(product.sku()) || isBlank(product.name()) || isBlank(product.category()) || isBlank(product.unit())) {
+        throw new IllegalArgumentException("Every product field is required: " + product);
+      }
+      if (!skus.add(product.sku())) {
+        throw new IllegalArgumentException("Repeated SKU: " + product.sku());
+      }
+    }
+  }
+
+  private static boolean isBlank(String value) {
+    return value == null || value.isBlank();
   }
 
   /** One attempt, run inside a transaction. Business rejections that wrote something abort it by throwing. */

@@ -32,6 +32,8 @@ talks to ([ADR 0011](../docs/adr/0011-frontend-only-talks-to-bff.md)). It is the
   - `InventoryReconciliationTests` — after a seeded random sequence of movements, every SKU's `onHand` equals the
     sum of its deltas.
   - `InventoryIndexesTests` — collections and indexes exist, creation is idempotent, a conflicting index stops startup.
+  - `RegisterProductsTests` — products inserted, updated or left unchanged, never deleted even when missing from a
+    later registration, invalid input refused with nothing written ([ADR 0027](../docs/adr/0027-products-from-the-seed-are-never-deleted.md)).
   - `GetStockLevelWorkerTests` — the tool contract of `provisio.inventory.get-stock-level`, case by case (no Docker
     needed).
   - `GetStockLevelWorkerProcessTests` — the worker through the real invocation path: Camunda Process Test runs a
@@ -42,9 +44,9 @@ talks to ([ADR 0011](../docs/adr/0011-frontend-only-talks-to-bff.md)). It is the
   - `DemandServiceTests` — monthly buckets and yearly calendar documents as stored, zero-filled series without closed
     days, invalid imports refused without changes, the unique bucket index, days unchanged under other time zones.
 - Seed module ([ADR 0026](../docs/adr/0026-demand-module-and-seed-loading.md)):
-  - `SeedLoaderTests` — first load, unchanged manifest skipped, changed manifest replaces the data, a file that does
-    not match its manifest stops the load, data and load record in one transaction, and the committed
-    `seed/data/online-retail-ii` loads.
+  - `SeedLoaderTests` — first load, unchanged manifest skipped, changed manifest replaces the demand and updates the
+    products without deleting any, a file that does not match its manifest stops the load, products, demand and load
+    record in one transaction, and the committed `seed/data/online-retail-ii` loads (54 products).
 
 Integration tests share one Spring context and one MongoDB container: keep their `@SpringBootTest` properties and
 imports identical, or each variant starts its own.
@@ -62,6 +64,9 @@ in one transaction ([ADR 0022](../docs/adr/0022-inventory-data-model.md)). Other
 - **Rejections leave no trace:** a movement rejected for insufficient stock is not recorded, so a later attempt with
   the same key is evaluated again.
 - **Retries:** transient transaction errors are retried up to three times; safe because movements are idempotent.
+- **Products** are registered with `registerProducts`: inserted or updated, never deleted, because the ledger refers
+  to them ([ADR 0027](../docs/adr/0027-products-from-the-seed-are-never-deleted.md)). The seed registers the demo
+  category at startup.
 - **Indexes** are created at startup by `InventoryIndexes`. A conflicting existing index stops startup instead of
   being ignored.
 - **Known limit — back-dated movements:** the non-negative check uses the current stock, not the stock at
@@ -84,7 +89,8 @@ Daily demand per product and the store's opening calendar ([ADR 0025](../docs/ad
 
 Loads `seed/data` at startup when `provisio.seed.dir` (`PROVISIO_SEED_DIR`) is set; Docker Compose and `run-local.sh`
 set it, tests do not. Every file is checked against `manifest.json`; if `seed_loads` records the same manifest
-nothing happens, otherwise the data is replaced and the load recorded in one transaction. A file that does not match
+nothing happens, otherwise, in one transaction, products are registered in inventory, demand data is replaced and the
+load is recorded. A file that does not match
 its manifest stops the application: regenerate the seed with `seed/derive` instead of editing it.
 
 ## Run

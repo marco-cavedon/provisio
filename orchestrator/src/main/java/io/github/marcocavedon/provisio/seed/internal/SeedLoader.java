@@ -1,6 +1,8 @@
 package io.github.marcocavedon.provisio.seed.internal;
 
 import io.github.marcocavedon.provisio.demand.DemandImport;
+import io.github.marcocavedon.provisio.inventory.InventoryOperations;
+import io.github.marcocavedon.provisio.inventory.ProductRegistration;
 import java.nio.file.Path;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -19,8 +21,9 @@ import org.springframework.transaction.support.TransactionTemplate;
  *   <li>Every file is checked against {@code manifest.json}: a hand-edited or truncated file stops the
  *       application.</li>
  *   <li>If {@code seed_loads} records the same manifest, nothing happens: restarts are cheap.</li>
- *   <li>Otherwise the demand history and calendar are replaced, and the load is recorded, in one transaction: a
- *       failure leaves the previous version intact.</li>
+ *   <li>Otherwise, in one transaction: products are registered in inventory (inserted or updated, never deleted,
+ *       ADR 0027), the demand history and calendar are replaced, and the load is recorded. A failure leaves the
+ *       previous version intact.</li>
  * </ol>
  *
  * <p>Created by {@link SeedConfiguration} only when the property is set. Any failure is thrown, so startup fails.
@@ -34,13 +37,15 @@ class SeedLoader implements ApplicationRunner {
   private final Path dir;
   private final MongoTemplate mongoTemplate;
   private final DemandImport demandImport;
+  private final InventoryOperations inventory;
   private final TransactionTemplate transaction;
 
-  SeedLoader(Path dir, MongoTemplate mongoTemplate, DemandImport demandImport,
+  SeedLoader(Path dir, MongoTemplate mongoTemplate, DemandImport demandImport, InventoryOperations inventory,
       PlatformTransactionManager transactionManager) {
     this.dir = dir;
     this.mongoTemplate = mongoTemplate;
     this.demandImport = demandImport;
+    this.inventory = inventory;
     this.transaction = new TransactionTemplate(transactionManager);
   }
 
@@ -57,16 +62,20 @@ class SeedLoader implements ApplicationRunner {
       return Outcome.UNCHANGED;
     }
 
+    ProductSeed products = ProductSeed.from(manifest);
     DemandSeed demand = DemandSeed.from(manifest);
-    SeedLoadDocument record = new SeedLoadDocument(manifest.dataset(), manifest.sha256(), demand.rows(),
-        Instant.now().truncatedTo(ChronoUnit.MILLIS));
-    transaction.executeWithoutResult(status -> {
+    SeedLoadDocument record = new SeedLoadDocument(manifest.dataset(), manifest.sha256(),
+        products.products().size() + demand.rows(), Instant.now().truncatedTo(ChronoUnit.MILLIS));
+    ProductRegistration registration = transaction.execute(status -> {
+      ProductRegistration registered = inventory.registerProducts(products.products());
       demandImport.replaceAll(demand.calendar(), demand.entries());
       mongoTemplate.save(record);
+      return registered;
     });
-    log.info("Seed {} loaded from {}: {} calendar days, {} product-days with sales",
-        manifest.dataset(), dir, demand.calendar().from().datesUntil(demand.calendar().to().plusDays(1)).count(),
-        demand.entries().size());
+    log.info("Seed {} loaded from {}: products {} inserted, {} updated, {} unchanged; {} calendar days, "
+            + "{} product-days with sales",
+        manifest.dataset(), dir, registration.inserted(), registration.updated(), registration.unchanged(),
+        demand.calendar().from().datesUntil(demand.calendar().to().plusDays(1)).count(), demand.entries().size());
     return Outcome.LOADED;
   }
 }
