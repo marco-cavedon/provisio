@@ -36,6 +36,15 @@ talks to ([ADR 0011](../docs/adr/0011-frontend-only-talks-to-bff.md)). It is the
     needed).
   - `GetStockLevelWorkerProcessTests` — the worker through the real invocation path: Camunda Process Test runs a
     one-task test process (`src/test/resources/bpmn`) on a Camunda engine in Docker, against MongoDB in Docker.
+- `LocalDateConversionsTests` — a calendar day is stored at midnight UTC whatever the JVM's default time zone
+  (no Docker needed).
+- Demand module ([ADR 0026](../docs/adr/0026-demand-module-and-seed-loading.md)):
+  - `DemandServiceTests` — monthly buckets and yearly calendar documents as stored, zero-filled series without closed
+    days, invalid imports refused without changes, the unique bucket index, days unchanged under other time zones.
+- Seed module ([ADR 0026](../docs/adr/0026-demand-module-and-seed-loading.md)):
+  - `SeedLoaderTests` — first load, unchanged manifest skipped, changed manifest replaces the data, a file that does
+    not match its manifest stops the load, data and load record in one transaction, and the committed
+    `seed/data/online-retail-ii` loads.
 
 Integration tests share one Spring context and one MongoDB container: keep their `@SpringBootTest` properties and
 imports identical, or each variant starts its own.
@@ -58,6 +67,25 @@ in one transaction ([ADR 0022](../docs/adr/0022-inventory-data-model.md)). Other
 - **Known limit — back-dated movements:** the non-negative check uses the current stock, not the stock at
   `occurredAt`. A back-dated issue can make a reconstruction of a past day show negative stock even though current
   stock is not negative. Acceptable for the MVP; relevant when replaying a period (roadmap R8).
+
+## Demand module
+
+Daily demand per product and the store's opening calendar ([ADR 0025](../docs/adr/0025-sales-dataset-and-business-time.md),
+[ADR 0026](../docs/adr/0026-demand-module-and-seed-loading.md)). Other modules use `DemandQueries` and `DemandImport`.
+
+- **Storage follows the reads:** every read is a series, so `demand_history` holds one bucket per product and month,
+  and `business_calendar` one document per year.
+- **Zeros are filled in one place:** `DemandQueries.dailyDemand` returns one entry per open day, zero where nothing
+  was sold, and omits closed days.
+- **Calendar days** are `LocalDate` in Java and a `Date` at midnight UTC in MongoDB, through the converters in
+  `MongoConfiguration`. Never store a day through any other path.
+
+## Seed module
+
+Loads `seed/data` at startup when `provisio.seed.dir` (`PROVISIO_SEED_DIR`) is set; Docker Compose and `run-local.sh`
+set it, tests do not. Every file is checked against `manifest.json`; if `seed_loads` records the same manifest
+nothing happens, otherwise the data is replaced and the load recorded in one transaction. A file that does not match
+its manifest stops the application: regenerate the seed with `seed/derive` instead of editing it.
 
 ## Run
 
@@ -111,6 +139,9 @@ In IntelliJ IDEA, set `MONGODB_APP_PASSWORD` in the run configuration's environm
 EnvFile plugin to `.env`. Startup fails with "MongoDB password is not set" if the variable is missing: Spring's
 configuration binding would otherwise pass the unresolved placeholder through as the password, and the error would
 appear only at the first query, as an authentication failure (`MongoConfiguration`).
+
+Without the script or Compose, no seed is loaded unless `PROVISIO_SEED_DIR` points to a dataset folder, for example
+`../seed/data/online-retail-ii` from the `orchestrator` directory (set it in the IntelliJ run configuration too).
 
 ## Stop
 

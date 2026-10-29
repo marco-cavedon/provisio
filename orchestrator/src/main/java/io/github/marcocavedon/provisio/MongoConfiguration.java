@@ -1,10 +1,12 @@
 package io.github.marcocavedon.provisio;
 
+import java.util.List;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.env.Environment;
 import org.springframework.data.mongodb.MongoDatabaseFactory;
 import org.springframework.data.mongodb.MongoTransactionManager;
+import org.springframework.data.mongodb.core.convert.MongoCustomConversions;
 import org.springframework.util.StringUtils;
 
 /**
@@ -49,5 +51,19 @@ class MongoConfiguration {
   @Bean
   MongoTransactionManager transactionManager(MongoDatabaseFactory databaseFactory) {
     return new MongoTransactionManager(databaseFactory);
+  }
+
+  /**
+   * Calendar days are stored at midnight UTC whatever the JVM's time zone (ADR 0026).
+   *
+   * <p>Replaces Spring Boot's default bean, whose only customisation is the
+   * {@code spring.data.mongodb.representation.big-decimal} property: Provisio does not set it, and that property stops
+   * having an effect while this bean exists.
+   */
+  @Bean
+  MongoCustomConversions mongoCustomConversions() {
+    return new MongoCustomConversions(List.of(
+        LocalDateConversions.LocalDateToDate.INSTANCE,
+        LocalDateConversions.DateToLocalDate.INSTANCE));
   }
 }

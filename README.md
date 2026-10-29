@@ -105,7 +105,7 @@ processes/      BPMN, DMN and forms
 orchestrator/   Spring Boot application: agent tools (job workers) + BFF API
 forecasting/    Python forecasting service
 frontend/       React UI
-seed/           Datasets, synthetic supplier documents, initialisation jobs
+seed/           Demo datasets and the tools that derive them; loaded by the orchestrator at startup
 infra/          Camunda, MongoDB and mongot configuration
 docs/           ADRs, architecture diagrams, spike reports
 ```

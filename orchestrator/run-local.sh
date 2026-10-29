@@ -66,6 +66,9 @@ if [[ -n "$(docker compose --project-directory "$ROOT_DIR" ps --status running -
 fi
 
 # 3. Run
-echo "run-local: stack healthy, starting the orchestrator (variables from .env: ${REQUIRED_VARS[*]})"
+# Demo data loaded at startup if not loaded already (ADR 0026), as in Docker Compose. An exported value wins.
+export PROVISIO_SEED_DIR="${PROVISIO_SEED_DIR:-$ROOT_DIR/seed/data/online-retail-ii}"
+
+echo "run-local: stack healthy, starting the orchestrator (variables from .env: ${REQUIRED_VARS[*]}; seed: $PROVISIO_SEED_DIR)"
 cd "$ORCHESTRATOR_DIR"
 exec ./mvnw spring-boot:run "$@"
