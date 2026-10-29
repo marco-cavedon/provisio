@@ -11,6 +11,14 @@ version: 2
 #   a Camunda vulnerability still shows as an alert in the Security tab, and is fixed by the same manual upgrade.
 
 updates:
+  - package-ecosystem: uv
+    directory: /seed/derive   # development tool that derives the committed seed data; it ships in no image
+    schedule:
+      interval: weekly
+    groups:
+      seed-derive:
+        patterns: ["*"]
+
   - package-ecosystem: github-actions
     directory: /
     schedule:

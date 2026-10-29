@@ -1,0 +1,53 @@
+name: Seed
+
+# Runs on every PR and push to main, so its check can be required by the ruleset; a path-filter job decides whether
+# the tests really run (same pattern as orchestrator.yml).
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  changes:
+    name: Detect seed changes
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read   # paths-filter lists the PR's changed files via the GitHub API
+    outputs:
+      seed: ${{ steps.filter.outputs.seed }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
+        id: filter
+        with:
+          filters: |
+            seed:
+              - 'seed/**'
+              - '.gitattributes'
+              - '.github/workflows/seed.yml'
+
+  derive:
+    name: Seed derivation and data
+    needs: changes
+    if: needs.changes.outputs.seed == 'true'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: seed/derive
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          working-directory: seed/derive
+      - name: Lint and format
+        run: |
+          uv run --locked ruff check .
+          uv run --locked ruff format --check .
+      # The original archive is not in the repository, so CI cannot re-derive the data. It tests every rule on small
+      # fixtures and checks the committed files against their manifest.
+      - name: Test
+        run: uv run --locked pytest

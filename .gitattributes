@@ -2,3 +2,5 @@
 mvnw text eol=lf
 *.sh text eol=lf
 *.cmd text eol=crlf
+# Seed data is checksummed byte for byte in its manifest
+seed/data/** text eol=lf

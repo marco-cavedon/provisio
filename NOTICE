@@ -2,3 +2,8 @@ Provisio
 Copyright 2026 Marco Cavedon
 
 This product is licensed under the Apache License, Version 2.0 (see LICENSE).
+
+This product includes data derived from the Online Retail II dataset by Daqing Chen, UCI Machine Learning
+Repository, https://doi.org/10.24432/C5CG6D, licensed under Creative Commons Attribution 4.0 International
+(https://creativecommons.org/licenses/by/4.0/). The data was filtered and aggregated as described in
+seed/README.md; see docs/adr/0025-sales-dataset-and-business-time.md.

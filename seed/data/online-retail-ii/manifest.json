@@ -1,0 +1,48 @@
+{
+  "dataset": "online-retail-ii",
+  "source": {
+    "name": "Online Retail II",
+    "url": "https://archive.ics.uci.edu/dataset/502/online+retail+ii",
+    "license": "CC BY 4.0",
+    "archive": "online_retail_ii.zip",
+    "sha256": "572e36277c2390fbfde10664750731e0a86f55e33470d91919085f0408e67bfb"
+  },
+  "generator": "seed/derive",
+  "periods": {
+    "fit": {
+      "start": "2009-12-01",
+      "end": "2010-12-31"
+    },
+    "selection": {
+      "start": "2011-01-01",
+      "end": "2011-06-30"
+    },
+    "replay": {
+      "start": "2011-07-01",
+      "end": "2011-12-08"
+    }
+  },
+  "summary": {
+    "skus": 54,
+    "calendarDays": 738,
+    "openDays": 603,
+    "orderedQuantity": 802330,
+    "cancelledQuantityMatched": 6997,
+    "cancelledQuantityUnmatched": 5560,
+    "demandQuantity": 795333
+  },
+  "files": {
+    "calendar.csv": {
+      "sha256": "cd2a765994cc0b37c7044bd2247d5ae277db4b85a17feb59cffe8a3c7ecd47c5",
+      "rows": 738
+    },
+    "daily-demand.csv": {
+      "sha256": "6ed26d67f0224b424cfb867876e9338b3ca446a407345e227103be5d0839599a",
+      "rows": 21277
+    },
+    "skus.csv": {
+      "sha256": "3b4232642f74edf70ea5bfbd2d247755cb46b22cc6b09baf239caed2e9f654f4",
+      "rows": 54
+    }
+  }
+}
