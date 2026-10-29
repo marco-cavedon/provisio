@@ -1,0 +1,35 @@
+[project]
+name = "provisio-seed-derive"
+version = "0.1.0"
+description = "Derives Provisio's committed demand subset from the Online Retail II dataset (ADR 0025)"
+license = "Apache-2.0"
+requires-python = ">=3.13"
+dependencies = [
+    "openpyxl>=3.1",
+    "pandas>=3.0",
+]
+
+[project.scripts]
+derive = "provisio_seed.cli:main"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.0",
+    "ruff>=0.14",
+]
+
+[build-system]
+requires = ["uv_build>=0.11,<0.12"]
+build-backend = "uv_build"
+
+[tool.uv.build-backend]
+module-name = "provisio_seed"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 120
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B", "SIM"]
