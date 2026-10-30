@@ -19,6 +19,14 @@ updates:
       seed-derive:
         patterns: ["*"]
 
+  - package-ecosystem: uv
+    directory: /forecasting   # forecasting service (ADR 0005, 0028)
+    schedule:
+      interval: weekly
+    groups:
+      forecasting:
+        patterns: ["*"]
+
   - package-ecosystem: github-actions
     directory: /
     schedule:
