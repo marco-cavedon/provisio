@@ -1,0 +1,52 @@
+name: Forecasting
+
+# Runs on every PR and push to main, so its check can be required by the ruleset; a path-filter job decides whether
+# the tests really run (same pattern as seed.yml).
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  changes:
+    name: Detect forecasting changes
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read   # paths-filter lists the PR's changed files via the GitHub API
+    outputs:
+      forecasting: ${{ steps.filter.outputs.forecasting }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
+        id: filter
+        with:
+          filters: |
+            forecasting:
+              - 'forecasting/**'
+              - 'contracts/forecasting/**'
+              - '.github/workflows/forecasting.yml'
+
+  test:
+    name: Forecasting service and contract
+    needs: changes
+    if: needs.changes.outputs.forecasting == 'true'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: forecasting
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          working-directory: forecasting
+      - name: Lint and format
+        run: |
+          uv run --locked ruff check .
+          uv run --locked ruff format --check .
+      # Includes contract conformance (ADR 0028): models regenerated from the contract, routes, and Schemathesis.
+      - name: Test
+        run: uv run --locked pytest

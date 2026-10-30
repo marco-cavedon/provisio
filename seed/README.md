@@ -4,7 +4,10 @@ Demo data for Provisio. Today it holds the demand history; synthetic supplier do
 with v0.3.0 ([roadmap](../docs/roadmap.md)).
 
 Nothing in this folder writes to MongoDB. Only the Spring application writes to the database
-([ADR 0006](../docs/adr/0006-precomputed-forecast-with-on-demand-recompute.md)): it reads these files as input.
+([ADR 0006](../docs/adr/0006-precomputed-forecast-with-on-demand-recompute.md)): its seed module loads these files at
+startup, if they are not loaded already ([ADR 0026](../docs/adr/0026-demand-module-and-seed-loading.md)): products
+into the inventory product master (never deleted, [ADR 0027](../docs/adr/0027-products-from-the-seed-are-never-deleted.md)),
+demand history and calendar into the demand module. Docker Compose mounts `data/` read-only into the orchestrator.
 
 ## Demand history
 
@@ -17,7 +20,7 @@ CC BY 4.0; attribution in [`NOTICE`](../NOTICE)). The choice of dataset and the 
 | --- | --- |
 | `daily-demand.csv` | `sku`, `day`, `quantity`: demand per product and day, on days with sales only |
 | `calendar.csv` | `day`, `open`: every calendar day from 1 December 2009 to 8 December 2011 |
-| `skus.csv` | `sku`, `description`: the products of the category |
+| `skus.csv` | `sku`, `description`, `category`, `unit`: the products of the category, all `BAGS` counted in `EA` |
 | `manifest.json` | Source checksum, periods, summary figures, checksum and row count of every file |
 
 A product with no row for an open day sold nothing that day. A closed day is not a zero: the store was not trading.

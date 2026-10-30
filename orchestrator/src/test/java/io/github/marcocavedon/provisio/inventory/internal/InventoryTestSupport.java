@@ -9,7 +9,7 @@ import org.springframework.data.mongodb.core.query.Query;
 /**
  * Fixtures shared by the inventory integration tests.
  *
- * <p>Products are inserted directly: the module has no operation to register them yet.
+ * <p>Products are inserted directly, so fixtures do not depend on {@code registerProducts}, which has its own tests.
  */
 final class InventoryTestSupport {
 

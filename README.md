@@ -35,7 +35,7 @@ while the process engine keeps every decision bounded, auditable and — above a
 
 | Concern | Handled by |
 | --- | --- |
-| Demand forecast, safety stock, reorder point | Statistical forecasting service (Python) |
+| Demand forecast and the demand to cover until the next delivery | Statistical forecasting service (Python) |
 | Supplier constraints, contracts, delays | Retrieval-augmented generation over MongoDB Vector Search |
 | Choosing supplier and quantity, explaining why | AI agent inside a Camunda ad-hoc sub-process |
 | Approval thresholds and policies | DMN decision tables |
@@ -105,7 +105,7 @@ processes/      BPMN, DMN and forms
 orchestrator/   Spring Boot application: agent tools (job workers) + BFF API
 forecasting/    Python forecasting service
 frontend/       React UI
-seed/           Datasets, synthetic supplier documents, initialisation jobs
+seed/           Demo datasets and the tools that derive them; loaded by the orchestrator at startup
 infra/          Camunda, MongoDB and mongot configuration
 docs/           ADRs, architecture diagrams, spike reports
 ```

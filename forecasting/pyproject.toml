@@ -1,0 +1,57 @@
+[project]
+name = "provisio-forecasting"
+version = "0.1.0"
+description = "Stateless forecasting service of Provisio (ADR 0005, 0028)"
+license = "Apache-2.0"
+requires-python = ">=3.13"
+dependencies = [
+    "fastapi>=0.162",
+    "pydantic>=2.14",
+    "uvicorn>=0.54",
+]
+
+[dependency-groups]
+dev = [
+    "datamodel-code-generator>=0.87",
+    "httpx>=0.28",
+    "pytest>=9.0",
+    "pyyaml>=6.0",
+    "ruff>=0.14",
+    "schemathesis>=4.32",
+]
+
+[build-system]
+requires = ["uv_build>=0.11,<0.12"]
+build-backend = "uv_build"
+
+[tool.uv.build-backend]
+module-name = "provisio_forecasting"
+
+# `uv run datamodel-codegen` regenerates the models from the contract with these options; a test fails when the
+# committed file differs from a fresh generation.
+[tool.datamodel-codegen]
+input = "../contracts/forecasting/openapi.yaml"
+input-file-type = "openapi"
+output = "src/provisio_forecasting/api/models.py"
+output-model-type = "pydantic_v2.BaseModel"
+target-python-version = "3.13"
+use-standard-collections = true
+use-union-operator = true
+use-annotated = true
+field-constraints = true
+snake-case-field = true
+use-subclass-enum = true
+use-double-quotes = true
+allow-population-by-field-name = true
+disable-timestamp = true
+formatters = ["ruff-format", "ruff-check"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 120
+extend-exclude = ["src/provisio_forecasting/api/models.py"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B", "SIM"]

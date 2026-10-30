@@ -163,6 +163,10 @@ services:
       MONGODB_APP_PASSWORD: ${MONGODB_APP_PASSWORD:?MONGODB_APP_PASSWORD is not set, see .env.example}
       CAMUNDA_CLIENT_GRPCADDRESS: http://orchestration:26500
       CAMUNDA_CLIENT_RESTADDRESS: http://orchestration:8080
+      # Demo data loaded at startup if not loaded already (ADR 0026); the image contains no data
+      PROVISIO_SEED_DIR: /seed/online-retail-ii
+    volumes:
+      - ./seed/data:/seed:ro
     # No host port: the orchestrator only makes outbound connections. No healthcheck until it has an HTTP endpoint
     # (the BFF); nothing depends on it.
     mem_limit: 768m

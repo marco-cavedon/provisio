@@ -1,0 +1,390 @@
+# Contract between the orchestrator and the forecasting service (ADR 0005, 0006, 0028).
+#
+# This file is the single source of truth. The Pydantic models of the service are generated from it and committed;
+# the Java client is generated from it at build time. OpenAPI 3.0.3 on purpose: 3.1 support is still beta in the
+# generators (ADR 0028), so no 3.1-only construct may appear here.
+openapi: 3.0.3
+info:
+  title: Provisio forecasting service
+  version: 1.0.0
+  description: |
+    Stateless forecasting of daily demand. The caller sends the demand history and the business calendar; the service
+    returns, per product, a forecast and the demand expected over the protection interval at the requested service
+    level. It holds no state, reads no database and knows nothing about Camunda.
+
+    **Where the service stops.** It estimates demand, including the quantile of demand over the protection interval,
+    because that estimate needs the model. It does not compute order quantities: subtracting stock on hand and on
+    order, rounding to the minimum order quantity and applying supplier terms belong to the caller.
+
+    **Business time.** Every request carries `asOf`, the business date the forecast is made on. The history is strictly
+    before `asOf`; an observation on or after it is rejected, so a backtest cannot leak the future.
+
+    **Idempotence.** The operation has no side effects: the same request gives the same response, and a timed-out call
+    can be retried safely.
+  license:
+    name: Apache-2.0
+    url: https://www.apache.org/licenses/LICENSE-2.0
+
+servers:
+  - url: http://localhost:8000
+    description: Local development
+
+paths:
+  /v1/forecasts:
+    post:
+      operationId: computeForecasts
+      summary: Forecast the demand of one or more products
+      description: |
+        Bulk operation: the nightly batch sends products in chunks, an on-demand recompute sends one. Each product
+        gets its own result, in the order of the request. A product that cannot be forecast has outcome `FAILED` and
+        does not affect the others.
+
+        A request that breaks a precondition of this contract is rejected as a whole with 422: it means the caller's
+        query is wrong, not that one product is hard to forecast.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ForecastRequest'
+      responses:
+        '200':
+          description: One result per product, in request order.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ForecastResponse'
+        '400':
+          description: The body cannot be read as JSON (invalid encoding or syntax).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '422':
+          description: The body is JSON but breaks the schema or a precondition of this contract.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+
+  /health:
+    get:
+      operationId: health
+      summary: Liveness and readiness
+      description: Returns 200 once the service is ready to compute forecasts.
+      responses:
+        '200':
+          description: The service is ready.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Health'
+
+components:
+  schemas:
+    ForecastRequest:
+      type: object
+      additionalProperties: false
+      required: [requestId, asOf, horizonEnd, calendar, series]
+      properties:
+        requestId:
+          type: string
+          minLength: 1
+          maxLength: 100
+          description: Caller's identifier, echoed in the response; correlates the call with a forecast run.
+        asOf:
+          type: string
+          format: date
+          description: Business date the forecast is made on. Every observation is strictly before it.
+        horizonEnd:
+          type: string
+          format: date
+          description: |
+            Last day of the forecast, included. Must be after `asOf` and cover the protection interval of every
+            product.
+        calendar:
+          $ref: '#/components/schemas/BusinessCalendar'
+        series:
+          type: array
+          minItems: 1
+          maxItems: 100
+          description: Products to forecast; each `sku` appears once.
+          items:
+            $ref: '#/components/schemas/SeriesInput'
+
+    BusinessCalendar:
+      type: object
+      additionalProperties: false
+      required: [from, to, closedDays]
+      description: |
+        Every day from `from` to `to`, both included, is open unless it is in `closedDays`. Demand is defined on open
+        days only: a closed day is not a day of zero demand. The range covers the whole history and the whole horizon,
+        so the service can count open days after `asOf`.
+      properties:
+        from:
+          type: string
+          format: date
+        to:
+          type: string
+          format: date
+        closedDays:
+          type: array
+          maxItems: 10000
+          uniqueItems: true
+          description: Days in the range on which the business is closed.
+          items:
+            type: string
+            format: date
+
+    SeriesInput:
+      type: object
+      additionalProperties: false
+      required: [sku, observations, leadTime, reviewPeriodDays, serviceLevel]
+      properties:
+        sku:
+          type: string
+          minLength: 1
+          maxLength: 64
+        observations:
+          type: array
+          minItems: 1
+          maxItems: 5000
+          description: |
+            Demand of every open day from the first observation to the last open day before `asOf`, in ascending
+            date order, with zeros for open days without sales. Gaps, closed days and dates on or after `asOf` are
+            rejected.
+          items:
+            $ref: '#/components/schemas/Observation'
+        leadTime:
+          $ref: '#/components/schemas/LeadTime'
+        reviewPeriodDays:
+          type: integer
+          minimum: 1
+          maximum: 365
+          description: Calendar days between two replenishment reviews of this product.
+        serviceLevel:
+          type: number
+          minimum: 0
+          exclusiveMinimum: true
+          maximum: 1
+          exclusiveMaximum: true
+          description: Probability of not running out of stock over the protection interval (cycle service level).
+
+    Observation:
+      type: object
+      additionalProperties: false
+      required: [date, quantity]
+      properties:
+        date:
+          type: string
+          format: date
+        quantity:
+          type: number
+          minimum: 0
+
+    LeadTime:
+      type: object
+      additionalProperties: false
+      required: [meanDays]
+      description: Supplier lead time in calendar days, as an estimate that can be wrong.
+      properties:
+        meanDays:
+          type: number
+          minimum: 0
+          exclusiveMinimum: true
+          maximum: 365
+        stdDays:
+          type: number
+          minimum: 0
+          maximum: 365
+          description: Standard deviation of the lead time; absent when the lead time is treated as known.
+
+    ForecastResponse:
+      type: object
+      additionalProperties: false
+      required: [requestId, service, results]
+      properties:
+        requestId:
+          type: string
+        service:
+          $ref: '#/components/schemas/ServiceInfo'
+        results:
+          type: array
+          description: One result per product, in request order.
+          items:
+            $ref: '#/components/schemas/SeriesResult'
+
+    ServiceInfo:
+      type: object
+      additionalProperties: false
+      required: [version, libraries]
+      description: What computed the forecast, recorded with every forecast version for reproducibility.
+      properties:
+        version:
+          type: string
+        libraries:
+          type: object
+          description: Versions of the libraries that determine the numbers, by package name.
+          additionalProperties:
+            type: string
+
+    SeriesResult:
+      type: object
+      additionalProperties: false
+      required: [sku, outcome]
+      description: |
+        Flat on purpose (ADR 0028): `outcome` says which fields are present. With `OK`, every field but `error` is
+        present; with `FAILED`, only `error` is guaranteed.
+      properties:
+        sku:
+          type: string
+        outcome:
+          type: string
+          enum: [OK, FAILED]
+        demandClass:
+          type: string
+          enum: [SMOOTH, ERRATIC, INTERMITTENT, LUMPY]
+          description: Syntetos–Boylan class of the history.
+        classification:
+          $ref: '#/components/schemas/Classification'
+        method:
+          type: string
+          description: Forecasting method applied. An open string, not an enum, so that adding a method is not a breaking change.
+        parameters:
+          type: object
+          additionalProperties: true
+          description: Fitted parameters and choices of the method, as the method reports them.
+        granularity:
+          type: string
+          enum: [DAILY, WEEKLY]
+          description: Length of the forecast periods.
+        forecast:
+          type: array
+          description: Forecast periods from `asOf` to `horizonEnd`, in date order.
+          items:
+            $ref: '#/components/schemas/ForecastPoint'
+        protectionInterval:
+          $ref: '#/components/schemas/ProtectionIntervalDemand'
+        error:
+          $ref: '#/components/schemas/SeriesError'
+
+    Classification:
+      type: object
+      additionalProperties: false
+      required: [adi, cv2]
+      properties:
+        adi:
+          type: number
+          minimum: 0
+          description: Average demand interval, in open days.
+        cv2:
+          type: number
+          minimum: 0
+          description: Squared coefficient of variation of the non-zero demand sizes.
+
+    ForecastPoint:
+      type: object
+      additionalProperties: false
+      required: [periodStart, periodEnd, mean]
+      properties:
+        periodStart:
+          type: string
+          format: date
+        periodEnd:
+          type: string
+          format: date
+          description: Last day of the period, included.
+        mean:
+          type: number
+          minimum: 0
+          description: Expected demand over the open days of the period.
+
+    ProtectionIntervalDemand:
+      type: object
+      additionalProperties: false
+      required: [start, end, openDays, mean, quantile, serviceLevel, quantileMethod]
+      description: |
+        Demand over the protection interval: the days a replenishment decision taken on `asOf` must cover. It starts
+        on `asOf` and lasts `ceil(leadTime.meanDays) + reviewPeriodDays` calendar days. Lead time variability, when
+        given, is reflected in the quantile, not in the nominal end.
+      properties:
+        start:
+          type: string
+          format: date
+        end:
+          type: string
+          format: date
+          description: Last day of the interval, included.
+        openDays:
+          type: integer
+          minimum: 0
+          description: Open days in the interval, from the calendar.
+        mean:
+          type: number
+          minimum: 0
+        quantile:
+          type: number
+          minimum: 0
+          description: Demand not exceeded with probability `serviceLevel`.
+        serviceLevel:
+          type: number
+        quantileMethod:
+          type: string
+          description: How the quantile was estimated (for example a bootstrap). An open string, like `method`.
+
+    SeriesError:
+      type: object
+      additionalProperties: false
+      required: [code, message]
+      properties:
+        code:
+          type: string
+          description: |
+            Machine-readable reason. An open string: new codes are not a breaking change, so clients must handle
+            unknown ones. Defined so far: `METHOD_NOT_IMPLEMENTED`, `INTERNAL_ERROR`.
+        message:
+          type: string
+
+    Problem:
+      type: object
+      description: Problem details (RFC 9457).
+      required: [type, title, status]
+      properties:
+        type:
+          type: string
+          description: URI reference identifying the problem type; `about:blank` when the status says it all.
+        title:
+          type: string
+        status:
+          type: integer
+        detail:
+          type: string
+        errors:
+          type: array
+          maxItems: 100
+          description: The violations found, not only the first; at most 100.
+          items:
+            $ref: '#/components/schemas/Violation'
+
+    Violation:
+      type: object
+      additionalProperties: false
+      required: [pointer, code, message]
+      properties:
+        pointer:
+          type: string
+          description: JSON Pointer (RFC 6901) to the offending part of the request; empty for the whole body.
+        code:
+          type: string
+          description: Machine-readable reason. An open string, like `SeriesError.code`.
+        message:
+          type: string
+
+    Health:
+      type: object
+      additionalProperties: false
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [UP]
