@@ -2,6 +2,7 @@ package io.github.marcocavedon.provisio.forecasting.internal;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.hamcrest.Matchers.contains;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.jsonPath;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.method;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
@@ -49,16 +50,15 @@ class ForecastingClientTests {
   void sendsTheRequestTheContractDefines() {
     server.expect(requestTo(URL))
         .andExpect(method(HttpMethod.POST))
-        // TEMPORARY: prints the request body to diagnose closedDays in CI
-        .andExpect(request -> System.out.println("REQUEST-BODY "
-            + ((org.springframework.mock.http.client.MockClientHttpRequest) request).getBodyAsString()))
         .andExpect(jsonPath("$.requestId").value("batch-1:attempt-1:chunk-0"))
         .andExpect(jsonPath("$.asOf").value("2011-07-01"))
         .andExpect(jsonPath("$.horizonEnd").value("2011-07-28"))
         .andExpect(jsonPath("$.calendar.from").value("2011-06-01"))
         // Sent up to the horizon only: the closed day after it is left out
         .andExpect(jsonPath("$.calendar.to").value("2011-07-28"))
-        .andExpect(jsonPath("$.calendar.closedDays").value(List.of("2011-06-04", "2011-07-02")))
+        // A matcher, not value(List.of(...)): value() converts what it reads to the expected value's class, and an
+        // immutable list is not one it can build
+        .andExpect(jsonPath("$.calendar.closedDays", contains("2011-06-04", "2011-07-02")))
         .andExpect(jsonPath("$.series[0].sku").value("A"))
         .andExpect(jsonPath("$.series[0].observations[0].date").value("2011-06-01"))
         .andExpect(jsonPath("$.series[0].observations[0].quantity").value(3))
