@@ -31,6 +31,12 @@ answers anything the contract does not document (Schemathesis).
 | `calendar.py`, `protection.py` | Open days and the protection interval, as the contract defines them |
 | `forecaster.py` | Forecasting methods (placeholder) |
 
+## Running
+
+In the local stack the service starts with the others (`docker compose up -d` from the repository root) and answers on
+<http://localhost:8000>: `GET /health` and `POST /v1/forecasts`. The image is built from the [`Dockerfile`](Dockerfile)
+when the published one cannot be pulled: the locked runtime dependencies only, run as a non-root user.
+
 ## Development
 
 Requires [uv](https://docs.astral.sh/uv/).
