@@ -10,14 +10,16 @@ repository root with `docker compose up -d`.
 | `mongodb` | `mongodb/mongodb-community-server:9.0.2-ubuntu2204` | Single-node replica set `rs0` | 27017 |
 | `mongot` | `mongodb/mongodb-community-search:1.70.5` | MongoDB Search and Vector Search | — |
 | `orchestrator` | `ghcr.io/marco-cavedon/provisio-orchestrator:0.1.1`, or built from `../orchestrator` | Provisio job workers (agent tools); see [its README](../orchestrator/README.md) | — |
+| `forecasting` | `ghcr.io/marco-cavedon/provisio-forecasting`, or built from `../forecasting` | Stateless forecasting service; see [its README](../forecasting/README.md) | 8000 |
 | `camunda-data-init`, `mongodb-init` | | One-shot initialisation jobs | — |
 
 Every host port is bound to `127.0.0.1`. Versions can be overridden with `CAMUNDA_VERSION`,
 `CAMUNDA_CONNECTORS_VERSION`, `MONGODB_VERSION`, `MONGOT_VERSION`, `PROVISIO_VERSION`.
 
-The orchestrator image is published for `linux/amd64` and `linux/arm64` on every version tag
-([ADR 0024](../docs/adr/0024-image-publication-when-public.md)). When it cannot be pulled, for example before the first
-publication, Compose builds it from source, which takes a few minutes the first time.
+The orchestrator and forecasting images are published for `linux/amd64` and `linux/arm64` on every version tag
+([ADR 0024](../docs/adr/0024-image-publication-when-public.md)), with the same version. When one cannot be pulled, for
+example before its first publication, Compose builds it from source, which takes a few minutes the first time. The
+forecasting image is published from the first release after v0.1.1, so until then it is always built.
 
 ## Configuration
 
@@ -107,7 +109,7 @@ Measured with `docker stats --no-stream` on 2026-10-08, stack idle and healthy, 
 | **Total** | **~1.75 GiB** | |
 
 Plan for at least **4 GiB of RAM available to Docker**: usage grows with data, indexes and process instances, and the
-orchestrator (limit 768 MiB, not yet measured) and the forecasting service add to it. `mongot` has no memory limit yet: it is a JVM, and a
+orchestrator (limit 768 MiB, not yet measured) and the forecasting service (limit 256 MiB, not yet measured) add to it. `mongot` has no memory limit yet: it is a JVM, and a
 limit chosen without load data risks out-of-memory kills; it will be set once real indexes exist.
 
 ## Known issues

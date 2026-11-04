@@ -1,0 +1,6 @@
+# Only what the build stage copies is sent to the builder: project metadata, lockfile and sources
+*
+!pyproject.toml
+!uv.lock
+!src/
+**/__pycache__
