@@ -49,6 +49,9 @@ class ForecastingClientTests {
   void sendsTheRequestTheContractDefines() {
     server.expect(requestTo(URL))
         .andExpect(method(HttpMethod.POST))
+        // TEMPORARY: prints the request body to diagnose closedDays in CI
+        .andExpect(request -> System.out.println("REQUEST-BODY "
+            + ((org.springframework.mock.http.client.MockClientHttpRequest) request).getBodyAsString()))
         .andExpect(jsonPath("$.requestId").value("batch-1:attempt-1:chunk-0"))
         .andExpect(jsonPath("$.asOf").value("2011-07-01"))
         .andExpect(jsonPath("$.horizonEnd").value("2011-07-28"))
