@@ -30,11 +30,14 @@ jobs:
             orchestrator:
               - 'orchestrator/**'
               - 'seed/data/**'   # the tests load the committed seed
+              - 'contracts/forecasting/**'   # the forecasting client is generated from it
+              - 'forecasting/**'   # the process tests build and call the forecasting service
               - 'mise.toml'
               - '.github/workflows/orchestrator.yml'
               - 'docker-compose.yml'
             image:
               - 'orchestrator/**'
+              - 'contracts/forecasting/**'
               - 'docker-compose.yml'
               - '.github/workflows/orchestrator.yml'
               - '.github/workflows/release.yml'
@@ -86,6 +89,7 @@ jobs:
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           context: orchestrator
+          build-contexts: contracts=contracts   # the forecasting contract (orchestrator/Dockerfile)
           platforms: linux/amd64,linux/arm64
           push: false
 

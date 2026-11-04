@@ -154,7 +154,11 @@ services:
     # The default version is bumped by the release-preparation pull request; the release workflow fails if it does not
     # match the tag.
     image: ghcr.io/marco-cavedon/provisio-orchestrator:${PROVISIO_VERSION:-0.1.1}
-    build: ./orchestrator
+    build:
+      context: ./orchestrator
+      # The build generates the forecasting client from the contract, outside the build context (orchestrator/Dockerfile)
+      additional_contexts:
+        contracts: ./contracts
     environment:
       # Inside the Compose network the replica set member name mongodb:27017 resolves, so the driver connects to the
       # replica set (from the host, application.yaml connects directly to localhost instead)
@@ -165,6 +169,8 @@ services:
       CAMUNDA_CLIENT_RESTADDRESS: http://orchestration:8080
       # Demo data loaded at startup if not loaded already (ADR 0026); the image contains no data
       PROVISIO_SEED_DIR: /seed/online-retail-ii
+      # Called by the forecast batch only (ADR 0030): the orchestrator starts without it, and the batch retries
+      PROVISIO_FORECASTING_BASEURL: http://forecasting:8000
     volumes:
       - ./seed/data:/seed:ro
     # No host port: the orchestrator only makes outbound connections. No healthcheck until it has an HTTP endpoint
