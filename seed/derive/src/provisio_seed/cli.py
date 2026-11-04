@@ -64,6 +64,7 @@ def to_csv(frame: pd.DataFrame) -> bytes:
 def derive(first: pd.DataFrame, second: pd.DataFrame, skus: pd.DataFrame) -> dict[str, bytes]:
     lines = rules.drop_partial_last_day(rules.merge_sheets(first, second))
     calendar = rules.opening_calendar(lines)
+    planned = rules.planned_calendar(calendar)
     selected = set(skus["sku"])
     result = rules.apply_cancellations(rules.product_lines(lines, selected))
     demand = rules.daily_demand(result.orders, calendar)
@@ -71,32 +72,44 @@ def derive(first: pd.DataFrame, second: pd.DataFrame, skus: pd.DataFrame) -> dic
 
     files = {
         "daily-demand.csv": to_csv(demand.assign(day=demand["day"].dt.strftime("%Y-%m-%d"))),
-        "calendar.csv": to_csv(
-            calendar.assign(day=calendar["day"].dt.strftime("%Y-%m-%d"), open=calendar["open"].map(str).str.lower())
-        ),
+        "calendar.csv": calendar_csv(calendar),
+        "planned-calendar.csv": calendar_csv(planned),
         "skus.csv": to_csv(skus.sort_values("sku", ignore_index=True).assign(category=CATEGORY, unit=UNIT)),
     }
-    manifest = {
+    summary = {
+        "skus": len(selected),
+        "calendarDays": len(calendar),
+        "openDays": int(calendar["open"].sum()),
+        "plannedCalendarDays": len(planned),
+        "plannedOpenDays": int(planned["open"].sum()),
+        "orderedQuantity": int(result.orders["Quantity"].sum() + result.matched_quantity),
+        "cancelledQuantityMatched": result.matched_quantity,
+        "cancelledQuantityUnmatched": result.unmatched_quantity,
+        "demandQuantity": int(demand["quantity"].sum()),
+    }
+    files["manifest.json"] = manifest(summary, files)
+    return files
+
+
+def calendar_csv(calendar: pd.DataFrame) -> bytes:
+    return to_csv(
+        calendar.assign(day=calendar["day"].dt.strftime("%Y-%m-%d"), open=calendar["open"].map(str).str.lower())
+    )
+
+
+def manifest(summary: dict, files: dict[str, bytes]) -> bytes:
+    """manifest.json for the data files: source, periods, summary, and each file's checksum and row count."""
+    document = {
         "dataset": "online-retail-ii",
         "source": SOURCE,
         "generator": "seed/derive",
         "periods": {p.name: {"start": p.start.isoformat(), "end": p.end.isoformat()} for p in rules.PERIODS},
-        "summary": {
-            "skus": len(selected),
-            "calendarDays": len(calendar),
-            "openDays": int(calendar["open"].sum()),
-            "orderedQuantity": int(result.orders["Quantity"].sum() + result.matched_quantity),
-            "cancelledQuantityMatched": result.matched_quantity,
-            "cancelledQuantityUnmatched": result.unmatched_quantity,
-            "demandQuantity": int(demand["quantity"].sum()),
-        },
+        "summary": summary,
         "files": {
-            name: {"sha256": sha256(content), "rows": content.count(b"\n") - 1}
-            for name, content in sorted(files.items())
+            name: {"sha256": sha256(data), "rows": data.count(b"\n") - 1} for name, data in sorted(files.items())
         },
     }
-    files["manifest.json"] = (json.dumps(manifest, indent=2) + "\n").encode()
-    return files
+    return (json.dumps(document, indent=2) + "\n").encode()
 
 
 def main() -> None:

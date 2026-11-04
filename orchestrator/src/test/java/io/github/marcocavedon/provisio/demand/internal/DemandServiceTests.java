@@ -40,7 +40,7 @@ class DemandServiceTests {
   private static final LocalDate TO = LocalDate.of(2011, 2, 2);
   private static final LocalDate NEW_YEAR = LocalDate.of(2011, 1, 1);
   private static final BusinessCalendar CALENDAR =
-      new BusinessCalendar(FROM, TO, Set.of(NEW_YEAR, LocalDate.of(2011, 1, 2)));
+      BusinessCalendar.observed(FROM, TO, Set.of(NEW_YEAR, LocalDate.of(2011, 1, 2)));
 
   @Autowired
   private DemandService demand;
@@ -85,6 +85,8 @@ class DemandServiceTests {
     assertThat(year2010.getDate("from")).isEqualTo(midnightUtc("2010-12-30"));
     assertThat(year2010.getDate("to")).isEqualTo(midnightUtc("2010-12-31"));
     assertThat(year2010.getList("closedDays", Date.class)).isEmpty();
+    // Observed in full: no planned part, so no field (ADR 0029)
+    assertThat(years).allSatisfy(year -> assertThat(year).doesNotContainKey("plannedFrom"));
     assertThat(years.get(1).getList("closedDays", Date.class))
         .containsExactly(midnightUtc("2011-01-01"), midnightUtc("2011-01-02"));
 
@@ -127,10 +129,43 @@ class DemandServiceTests {
 
     demand.replaceAll(CALENDAR, List.of());
     assertThatThrownBy(() -> demand.dailyDemand("A", FROM.minusDays(1), TO))
-        .isInstanceOf(IllegalArgumentException.class).hasMessageContaining("outside the calendar");
+        .isInstanceOf(IllegalArgumentException.class).hasMessageContaining("outside the observed calendar");
     assertThatThrownBy(() -> demand.dailyDemand("A", FROM, TO.plusDays(2)))
-        .isInstanceOf(IllegalArgumentException.class).hasMessageContaining("outside the calendar");
+        .isInstanceOf(IllegalArgumentException.class).hasMessageContaining("outside the observed calendar");
     assertThatCode(() -> demand.dailyDemand("A", FROM, TO.plusDays(1))).doesNotThrowAnyException();
+  }
+
+  @Test
+  void storesWhereThePlannedPartStartsInEachYearItTouches() {
+    // Observed up to 2010-12-31, planned from 2011-01-01: the planned part starts exactly at a year boundary
+    BusinessCalendar calendar = new BusinessCalendar(FROM, LocalDate.of(2010, 12, 31), TO, Set.of(NEW_YEAR));
+    demand.replaceAll(calendar, List.of(entry("A", "2010-12-30", 2)));
+
+    List<Document> years = raw(CalendarYearDocument.COLLECTION);
+    assertThat(years.getFirst()).doesNotContainKey("plannedFrom");
+    assertThat(years.get(1).getDate("plannedFrom")).isEqualTo(midnightUtc("2011-01-01"));
+    assertThat(demand.calendar()).contains(calendar);
+  }
+
+  @Test
+  void plannedDaysAreOpenOrClosedButHaveNoDemand() {
+    BusinessCalendar calendar = new BusinessCalendar(FROM, LocalDate.of(2011, 1, 20), TO, Set.of(NEW_YEAR,
+        LocalDate.of(2011, 1, 29)));
+    demand.replaceAll(calendar, List.of(entry("A", "2011-01-20", 3)));
+
+    BusinessCalendar stored = demand.calendar().orElseThrow();
+    assertThat(stored.observedTo()).isEqualTo(LocalDate.of(2011, 1, 20));
+    assertThat(stored.isOpen(LocalDate.of(2011, 1, 28))).isTrue();
+    assertThat(stored.isOpen(LocalDate.of(2011, 1, 29))).isFalse();
+    assertThat(stored.isObserved(LocalDate.of(2011, 1, 21))).isFalse();
+
+    // The last observed day is readable; one planned day more is refused, not zero-filled
+    assertThat(demand.dailyDemand("A", LocalDate.of(2011, 1, 20), LocalDate.of(2011, 1, 21)))
+        .containsExactly(new DailyDemand(LocalDate.of(2011, 1, 20), 3));
+    assertThatThrownBy(() -> demand.dailyDemand("A", LocalDate.of(2011, 1, 20), LocalDate.of(2011, 1, 22)))
+        .isInstanceOf(IllegalArgumentException.class).hasMessageContaining("outside the observed calendar");
+    assertThatThrownBy(() -> demand.replaceAll(calendar, List.of(entry("A", "2011-01-21", 1))))
+        .isInstanceOf(IllegalArgumentException.class).hasMessageContaining("planned day");
   }
 
   @Test
@@ -152,7 +187,7 @@ class DemandServiceTests {
   @Test
   void replaceAllRemovesWhatWasThereBefore() {
     demand.replaceAll(CALENDAR, List.of(entry("A", "2011-01-03", 1), entry("B", "2011-01-03", 1)));
-    BusinessCalendar shorter = new BusinessCalendar(LocalDate.of(2011, 1, 3), LocalDate.of(2011, 1, 31), Set.of());
+    BusinessCalendar shorter = BusinessCalendar.observed(LocalDate.of(2011, 1, 3), LocalDate.of(2011, 1, 31), Set.of());
     demand.replaceAll(shorter, List.of(entry("A", "2011-01-04", 9)));
 
     assertThat(raw(DemandBucketDocument.COLLECTION)).hasSize(1);

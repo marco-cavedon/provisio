@@ -6,22 +6,33 @@ import java.util.Set;
 import java.util.stream.Stream;
 
 /**
- * The days the store was trading, between two dates (ADR 0025).
+ * The days the store trades, between two dates (ADR 0025, ADR 0029).
  *
  * <p>Every day from {@code from} to {@code to}, both included, is open unless it is in {@code closedDays}. A closed day
  * is not a day with zero demand: the store was not trading. Days outside the range are unknown.
  *
+ * <p>The calendar has two parts. Up to {@code observedTo} it is <em>observed</em>: derived from the sales data, and
+ * demand is known on every open day. After it, up to {@code to}, it is <em>planned</em>: the store's opening schedule,
+ * known in advance, on which no demand exists yet. Forecasting needs the planned part to count the open days after
+ * its business date.
+ *
  * @param from first day covered
+ * @param observedTo last observed day; equal to {@code to} when nothing is planned
  * @param to last day covered, included
- * @param closedDays days in the range on which the store was closed
+ * @param closedDays days in the range on which the store is closed
  */
-public record BusinessCalendar(LocalDate from, LocalDate to, Set<LocalDate> closedDays) {
+public record BusinessCalendar(LocalDate from, LocalDate observedTo, LocalDate to, Set<LocalDate> closedDays) {
 
   public BusinessCalendar {
     Objects.requireNonNull(from, "from");
+    Objects.requireNonNull(observedTo, "observedTo");
     Objects.requireNonNull(to, "to");
     if (to.isBefore(from)) {
       throw new IllegalArgumentException("Calendar ends (" + to + ") before it starts (" + from + ")");
+    }
+    if (observedTo.isBefore(from) || observedTo.isAfter(to)) {
+      throw new IllegalArgumentException("Last observed day " + observedTo + " is outside the calendar " + from + ".."
+          + to);
     }
     closedDays = Set.copyOf(closedDays);
     for (LocalDate day : closedDays) {
@@ -31,12 +42,22 @@ public record BusinessCalendar(LocalDate from, LocalDate to, Set<LocalDate> clos
     }
   }
 
-  /** Whether the day is in the calendar's range. */
+  /** A calendar observed in full, with no planned part. */
+  public static BusinessCalendar observed(LocalDate from, LocalDate to, Set<LocalDate> closedDays) {
+    return new BusinessCalendar(from, to, to, closedDays);
+  }
+
+  /** Whether the day is in the calendar's range, observed or planned. */
   public boolean covers(LocalDate day) {
     return !day.isBefore(from) && !day.isAfter(to);
   }
 
-  /** Whether the store was trading on that day; false outside the range. */
+  /** Whether the day is in the observed part, where demand is known. */
+  public boolean isObserved(LocalDate day) {
+    return !day.isBefore(from) && !day.isAfter(observedTo);
+  }
+
+  /** Whether the store trades on that day, observed or planned; false outside the range. */
   public boolean isOpen(LocalDate day) {
     return covers(day) && !closedDays.contains(day);
   }
