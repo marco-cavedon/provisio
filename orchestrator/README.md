@@ -42,11 +42,14 @@ talks to ([ADR 0011](../docs/adr/0011-frontend-only-talks-to-bff.md)). It is the
   (no Docker needed).
 - Demand module ([ADR 0026](../docs/adr/0026-demand-module-and-seed-loading.md)):
   - `DemandServiceTests` — monthly buckets and yearly calendar documents as stored, zero-filled series without closed
-    days, invalid imports refused without changes, the unique bucket index, days unchanged under other time zones.
+    days, invalid imports refused without changes, the unique bucket index, days unchanged under other time zones,
+    the planned part of the calendar stored per year and never zero-filled ([ADR 0029](../docs/adr/0029-planned-business-calendar.md)).
 - Seed module ([ADR 0026](../docs/adr/0026-demand-module-and-seed-loading.md)):
   - `SeedLoaderTests` — first load, unchanged manifest skipped, changed manifest replaces the demand and updates the
     products without deleting any, a file that does not match its manifest stops the load, products, demand and load
-    record in one transaction, and the committed `seed/data/online-retail-ii` loads (54 products).
+    record in one transaction, a planned calendar that does not continue the observed one stops the load, and the
+    committed `seed/data/online-retail-ii` loads (54 products, calendar observed to 8 December 2011 and planned to
+    31 January 2012).
 
 Integration tests share one Spring context and one MongoDB container: keep their `@SpringBootTest` properties and
 imports identical, or each variant starts its own.
@@ -82,6 +85,9 @@ Daily demand per product and the store's opening calendar ([ADR 0025](../docs/ad
   and `business_calendar` one document per year.
 - **Zeros are filled in one place:** `DemandQueries.dailyDemand` returns one entry per open day, zero where nothing
   was sold, and omits closed days.
+- **Observed and planned calendar** ([ADR 0029](../docs/adr/0029-planned-business-calendar.md)): `BusinessCalendar`
+  is observed up to `observedTo` and planned after it. Planned days say whether the store will open, for forecasting;
+  they have no demand, so `dailyDemand` refuses a range that reaches them instead of returning zeros.
 - **Calendar days** are `LocalDate` in Java and a `Date` at midnight UTC in MongoDB, through the converters in
   `MongoConfiguration`. Never store a day through any other path.
 

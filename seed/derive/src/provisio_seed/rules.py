@@ -25,6 +25,15 @@ PRODUCT_CODE = r"^\d{5}[A-Za-z]*$"
 # A cancellation matches an order placed on the same calendar day or the day before.
 CANCELLATION_WINDOW_DAYS = 1
 
+# The planned calendar continues the observed one up to this day (ADR 0029): the last replay day plus the longest
+# forecast horizon, with a margin.
+PLANNED_CALENDAR_END = date(2012, 1, 31)
+# Weekday the store is closed on, as observed: 104 of 105 Saturdays (Monday is 0)
+PLANNED_CLOSED_WEEKDAY = 5
+# Christmas shutdown, as observed in 2009-10 and 2010-11: closed from 24 December to 3 January, both included
+CHRISTMAS_SHUTDOWN_START = (12, 24)
+CHRISTMAS_SHUTDOWN_END = (1, 3)
+
 
 @dataclass(frozen=True)
 class Period:
@@ -148,3 +157,26 @@ def check_coverage(demand: pd.DataFrame, skus: set[str]) -> None:
                 problems.append(f"{sku}: no demand in the {period.name} period")
     if problems:
         raise ValueError("selected products without full coverage:\n" + "\n".join(problems))
+
+
+def planned_closed(day: date) -> bool:
+    """Whether the planned calendar closes the store on that day (ADR 0029).
+
+    The rules are those the observed calendar follows: closed on Saturdays and during the Christmas shutdown. UK bank
+    holidays are not modelled: none falls in the planned range outside the shutdown.
+    """
+    if day.weekday() == PLANNED_CLOSED_WEEKDAY:
+        return True
+    return (day.month, day.day) >= CHRISTMAS_SHUTDOWN_START or (day.month, day.day) <= CHRISTMAS_SHUTDOWN_END
+
+
+def planned_calendar(observed: pd.DataFrame, end: date = PLANNED_CALENDAR_END) -> pd.DataFrame:
+    """One row per day from the day after the observed calendar ends to `end`, open unless a planning rule closes it.
+
+    Same columns as the observed calendar. The days are planned, not observed: no demand can be recorded on them.
+    """
+    first = observed["day"].max() + pd.Timedelta(days=1)
+    if first.date() > end:
+        raise ValueError(f"the observed calendar already reaches {first.date()}, after the planned end {end}")
+    days = pd.date_range(first, pd.Timestamp(end), freq="D")
+    return pd.DataFrame({"day": days, "open": [not planned_closed(d.date()) for d in days]})

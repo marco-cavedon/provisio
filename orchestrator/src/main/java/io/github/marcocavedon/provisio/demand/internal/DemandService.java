@@ -54,7 +54,15 @@ class DemandService implements DemandQueries, DemandImport {
     }
     Set<LocalDate> closed = new HashSet<>();
     years.forEach(year -> closed.addAll(year.closedDays()));
-    return Optional.of(new BusinessCalendar(years.getFirst().from(), years.getLast().to(), closed));
+    // The planned part is a suffix: it starts at the first planned day of the earliest year that has one
+    LocalDate to = years.getLast().to();
+    LocalDate observedTo = years.stream()
+        .map(CalendarYearDocument::plannedFrom)
+        .filter(Objects::nonNull)
+        .findFirst()
+        .map(plannedFrom -> plannedFrom.minusDays(1))
+        .orElse(to);
+    return Optional.of(new BusinessCalendar(years.getFirst().from(), observedTo, to, closed));
   }
 
   @Override
@@ -66,9 +74,10 @@ class DemandService implements DemandQueries, DemandImport {
     BusinessCalendar calendar = calendar()
         .orElseThrow(() -> new IllegalStateException("No demand history loaded: the seed has not run"));
     if (endExclusive.isAfter(from)
-        && !(calendar.covers(from) && calendar.covers(endExclusive.minusDays(1)))) {
+        && !(calendar.isObserved(from) && calendar.isObserved(endExclusive.minusDays(1)))) {
+      // Planned days have no demand yet: zeros there would be invented sales, not missing ones (ADR 0029)
       throw new IllegalArgumentException("Range " + from + ".." + endExclusive + " (end excluded) is outside the "
-          + "calendar " + calendar.from() + ".." + calendar.to());
+          + "observed calendar " + calendar.from() + ".." + calendar.observedTo());
     }
 
     // Buckets whose month overlaps the range: from the month of `from` to the last month starting before the end
@@ -110,6 +119,10 @@ class DemandService implements DemandQueries, DemandImport {
       if (!calendar.isOpen(entry.day())) {
         throw new IllegalArgumentException("Demand on a day that is not open in the calendar: " + entry);
       }
+      if (!calendar.isObserved(entry.day())) {
+        throw new IllegalArgumentException("Demand on a planned day, after the observed calendar ends on "
+            + calendar.observedTo() + ": " + entry);
+      }
       if (!seen.add(new DemandKey(entry.sku(), entry.day()))) {
         throw new IllegalArgumentException("Repeated product and day: " + entry);
       }
@@ -140,7 +153,10 @@ class DemandService implements DemandQueries, DemandImport {
           .filter(day -> !day.isBefore(from) && !day.isAfter(to))
           .sorted()
           .toList();
-      years.add(new CalendarYearDocument(year, from, to, closed));
+      LocalDate plannedFrom = calendar.observedTo().isBefore(to)
+          ? max(from, calendar.observedTo().plusDays(1))
+          : null;
+      years.add(new CalendarYearDocument(year, from, to, plannedFrom, closed));
     }
     return years;
   }

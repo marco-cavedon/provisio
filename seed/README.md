@@ -19,11 +19,14 @@ CC BY 4.0; attribution in [`NOTICE`](../NOTICE)). The choice of dataset and the 
 | File | Content |
 | --- | --- |
 | `daily-demand.csv` | `sku`, `day`, `quantity`: demand per product and day, on days with sales only |
-| `calendar.csv` | `day`, `open`: every calendar day from 1 December 2009 to 8 December 2011 |
+| `calendar.csv` | `day`, `open`: every calendar day from 1 December 2009 to 8 December 2011, observed in the sales data |
+| `planned-calendar.csv` | `day`, `open`: every calendar day from 9 December 2011 to 31 January 2012, planned by rule ([ADR 0029](../docs/adr/0029-planned-business-calendar.md)) |
 | `skus.csv` | `sku`, `description`, `category`, `unit`: the products of the category, all `BAGS` counted in `EA` |
 | `manifest.json` | Source checksum, periods, summary figures, checksum and row count of every file |
 
 A product with no row for an open day sold nothing that day. A closed day is not a zero: the store was not trading.
+The planned calendar continues the observed one with the rules it follows (closed on Saturdays and from 24 December
+to 3 January), so forecasts made near the end of the data can count the open days ahead; no demand exists on it.
 No invoice lines, customer identifiers or countries are included.
 
 ### Category: bags
