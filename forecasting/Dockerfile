@@ -1,10 +1,12 @@
-# syntax=docker/dockerfile:1
 # Forecasting service image for the local Docker Compose stack (ADR 0005, ADR 0007, ADR 0028).
 #
 # Two stages: uv installs the locked runtime dependencies and the service into a virtual environment, then only that
 # environment is copied onto a clean Python image and run as a non-root user. Dependencies are installed before the
 # sources are copied, so a code change reinstalls only the service itself.
 # Tests and development tools are not installed: they run in CI (forecasting workflow) and with `uv run pytest`.
+#
+# No BuildKit-only instruction (such as cache mounts): the orchestrator's process tests build this image with
+# Testcontainers, which uses Docker's classic builder.
 #
 # Base images are pinned to an exact release, so the same Dockerfile builds the same image over time; Dependabot
 # proposes the updates (.github/dependabot.yml). Both stages use the same Python release: the virtual environment
@@ -16,23 +18,21 @@ FROM ghcr.io/astral-sh/uv:0.13.7 AS uv
 # ---------------------------------------------------------------- build
 FROM python:3.13.18-slim-trixie AS build
 COPY --from=uv /uv /usr/local/bin/uv
-# Bytecode compiled at build time, so the first request does not pay for it; files copied, not hard-linked from the
-# cache mount; the image's Python only, never a downloaded one.
+# Bytecode compiled at build time, so the first request does not pay for it; no download cache left in the layers;
+# the image's Python only, never a downloaded one.
 ENV UV_COMPILE_BYTECODE=1 \
-    UV_LINK_MODE=copy \
+    UV_NO_CACHE=1 \
     UV_PYTHON_DOWNLOADS=never \
     UV_PROJECT_ENVIRONMENT=/app/.venv
 WORKDIR /app
 
+# Dependencies first, in their own layer: rebuilt only when the lockfile changes
 COPY pyproject.toml uv.lock ./
-# The cache mount keeps downloaded packages between builds; it is not part of the image
-RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync --locked --no-dev --no-install-project
+RUN uv sync --locked --no-dev --no-install-project
 
 COPY src src
 # Installed as a regular package, not in editable mode, so the runtime stage needs no sources next to it
-RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync --locked --no-dev --no-editable
+RUN uv sync --locked --no-dev --no-editable
 
 # ---------------------------------------------------------------- runtime
 FROM python:3.13.18-slim-trixie
