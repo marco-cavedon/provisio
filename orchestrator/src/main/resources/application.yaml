@@ -27,3 +27,19 @@ camunda:
     mode: self-managed
     grpc-address: http://localhost:26500
     rest-address: http://localhost:8080
+
+# Forecasting module (ADR 0030). The service URL defaults to the local stack as seen from the host; inside Compose it
+# is overridden with PROVISIO_FORECASTING_BASEURL. The policy values are placeholders until supplier data provides
+# lead times (v0.3.0); every forecast stores the values it was computed with.
+provisio:
+  forecasting:
+    base-url: http://localhost:8000
+    connect-timeout: 2s
+    read-timeout: 60s      # one chunk; the job timeout (10 min) covers the whole run
+    chunk-size: 20         # products per request, at most 100 (contract)
+    horizon-days: 28       # forecast days from asOf; at least the protection interval (ceil(14) + 7 = 21)
+    default-policy:
+      lead-time-mean-days: 14
+      # lead-time-std-days: absent, the lead time is treated as known
+      review-period-days: 7
+      service-level: 0.95

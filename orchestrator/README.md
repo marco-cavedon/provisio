@@ -38,6 +38,14 @@ talks to ([ADR 0011](../docs/adr/0011-frontend-only-talks-to-bff.md)). It is the
     needed).
   - `GetStockLevelWorkerProcessTests` — the worker through the real invocation path: Camunda Process Test runs a
     one-task test process (`src/test/resources/bpmn`) on a Camunda engine in Docker, against MongoDB in Docker.
+- Forecasting module ([ADR 0030](../docs/adr/0030-forecasting-module-and-batch.md)):
+  - `ForecastingClientTests` — the request the contract defines, the OK and FAILED mappings, HTTP failures classified
+    as retry or no retry, against a mocked server (no Docker needed).
+  - `ForecastBatchTests` — chunks, one stored version per product, resumption after a failure, no duplicate under a
+    concurrent attempt, rejected dates, the latest version as of a date, indexes; the service replaced by a fake.
+  - `RunForecastBatchWorkerTests` — business date, run identifier and output of the worker (no Docker needed).
+  - `RunForecastBatchWorkerProcessTests` — the worker end to end: Camunda, MongoDB and the real forecasting service,
+    built from `forecasting/Dockerfile` (the first run builds the image).
 - `LocalDateConversionsTests` — a calendar day is stored at midnight UTC whatever the JVM's default time zone
   (no Docker needed).
 - Demand module ([ADR 0026](../docs/adr/0026-demand-module-and-seed-loading.md)):
@@ -90,6 +98,23 @@ Daily demand per product and the store's opening calendar ([ADR 0025](../docs/ad
   they have no demand, so `dailyDemand` refuses a range that reaches them instead of returning zeros.
 - **Calendar days** are `LocalDate` in Java and a `Date` at midnight UTC in MongoDB, through the converters in
   `MongoConfiguration`. Never store a day through any other path.
+
+## Forecasting module
+
+The forecast batch and its versioned forecasts ([ADR 0006](../docs/adr/0006-precomputed-forecast-with-on-demand-recompute.md),
+[ADR 0030](../docs/adr/0030-forecasting-module-and-batch.md)). Other modules use `ForecastQueries`; the client of the
+forecasting service is generated from [`contracts/forecasting/openapi.yaml`](../contracts/forecasting/openapi.yaml)
+at build time (`./mvnw generate-sources` refreshes it in the IDE) and stays internal.
+
+- **Job worker** `provisio.forecasting.run-batch`: input `asOf` (ISO date), output
+  `forecastRun {runId, asOf, horizonEnd, requested, ok, failed}`. Service unavailable: the engine retries and the run
+  resumes. A run that cannot succeed (no `asOf`, dates outside the calendar, a request the service rejects): an
+  incident at once.
+- **Idempotent:** the run identifier comes from the element instance key, and a forecast's `_id` is `runId:sku`, so a
+  retried or duplicated job never stores a product twice.
+- **Configuration** `provisio.forecasting.*` in `application.yaml`: service URL (`PROVISIO_FORECASTING_BASEURL` in
+  Compose), timeouts, chunk size, horizon and the default replenishment policy, a placeholder until supplier data
+  exists. Every forecast stores the policy it was computed with.
 
 ## Seed module
 

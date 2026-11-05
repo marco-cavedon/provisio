@@ -104,6 +104,7 @@ See [`docs/architecture`](docs/architecture/README.md) for C4 context and contai
 processes/      BPMN, DMN and forms
 orchestrator/   Spring Boot application: agent tools (job workers) + BFF API
 forecasting/    Python forecasting service
+contracts/      API contracts between services (OpenAPI), the source of generated code on both sides
 frontend/       React UI
 seed/           Demo datasets and the tools that derive them; loaded by the orchestrator at startup
 infra/          Camunda, MongoDB and mongot configuration

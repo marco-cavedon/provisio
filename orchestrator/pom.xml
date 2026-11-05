@@ -23,6 +23,8 @@
     <!-- Client version matches the orchestration cluster version (see infra) -->
     <camunda.version>8.9.23</camunda.version>
     <spring-modulith.version>2.1.2</spring-modulith.version>
+    <!-- Generates the forecasting service client from contracts/forecasting/openapi.yaml at build time (ADR 0030) -->
+    <openapi-generator.version>7.27.0</openapi-generator.version>
 
     <!--
       Dependency alignment overrides. Re-check on every Camunda or Spring Boot upgrade.
@@ -65,6 +67,16 @@
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-data-mongodb</artifactId>
     </dependency>
+    <!-- RestClient and Jackson 3, used by the generated forecasting client (ADR 0030) -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-restclient</artifactId>
+    </dependency>
+    <!-- @Generated on the generated client classes; version managed by the Spring Boot BOM -->
+    <dependency>
+      <groupId>jakarta.annotation</groupId>
+      <artifactId>jakarta.annotation-api</artifactId>
+    </dependency>
 
     <dependency>
       <groupId>org.springframework.modulith</groupId>
@@ -99,6 +111,51 @@
       <plugin>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-maven-plugin</artifactId>
+      </plugin>
+      <!--
+        Java client of the forecasting service, generated from the contract on every build and never committed
+        (ADR 0028, ADR 0030). It lands in an internal package of the forecasting module, so no other module sees it.
+        The contract is outside this folder: the Docker build passes it as a named build context (Dockerfile).
+      -->
+      <plugin>
+        <groupId>org.openapitools</groupId>
+        <artifactId>openapi-generator-maven-plugin</artifactId>
+        <version>${openapi-generator.version}</version>
+        <executions>
+          <execution>
+            <id>forecasting-client</id>
+            <goals>
+              <goal>generate</goal>
+            </goals>
+            <configuration>
+              <inputSpec>${project.basedir}/../contracts/forecasting/openapi.yaml</inputSpec>
+              <generatorName>java</generatorName>
+              <library>restclient</library>
+              <packageName>io.github.marcocavedon.provisio.forecasting.internal.client</packageName>
+              <invokerPackage>io.github.marcocavedon.provisio.forecasting.internal.client</invokerPackage>
+              <apiPackage>io.github.marcocavedon.provisio.forecasting.internal.client.api</apiPackage>
+              <modelPackage>io.github.marcocavedon.provisio.forecasting.internal.client.model</modelPackage>
+              <generateApiTests>false</generateApiTests>
+              <generateModelTests>false</generateModelTests>
+              <generateApiDocumentation>false</generateApiDocumentation>
+              <generateModelDocumentation>false</generateModelDocumentation>
+              <configOptions>
+                <!-- Spring Framework 7 RestClient and Jackson 3, as in the application -->
+                <useSpringBoot4>true</useSpringBoot4>
+                <useJackson3>true</useJackson3>
+                <useJakartaEe>true</useJakartaEe>
+                <!-- The contract has no nullable fields: no jackson-databind-nullable dependency -->
+                <openApiNullable>false</openApiNullable>
+                <!-- JSpecify comes with Spring Framework 7 -->
+                <useJspecify>true</useJspecify>
+                <annotationLibrary>none</annotationLibrary>
+                <documentationProvider>none</documentationProvider>
+                <dateLibrary>java8</dateLibrary>
+                <hideGenerationTimestamp>true</hideGenerationTimestamp>
+              </configOptions>
+            </configuration>
+          </execution>
+        </executions>
       </plugin>
       <!-- Fail fast with a clear message instead of cryptic class-file errors (found in spike 001) -->
       <plugin>
