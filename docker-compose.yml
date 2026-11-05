@@ -177,6 +177,23 @@ services:
       orchestration:
         condition: service_healthy
 
+  forecasting: # stateless forecasting service (ADR 0005, ADR 0028); no database, no Camunda
+    # Published on every version tag together with the orchestrator image, with the same version and the same
+    # pull-or-build fallback.
+    image: ghcr.io/marco-cavedon/provisio-forecasting:${PROVISIO_VERSION:-0.1.1}
+    build: ./forecasting
+    ports:
+      - "127.0.0.1:8000:8000" # HTTP API, for trying the contract from the host
+    mem_limit: 256m # not yet measured; revisit when the forecasting methods exist (roadmap R1)
+    restart: on-failure
+    healthcheck:
+      # The slim image has no curl or wget; the service's own Python does the request
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=2)"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
+
 volumes:
   camunda:
   camunda-data:
