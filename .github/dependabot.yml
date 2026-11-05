@@ -27,6 +27,16 @@ updates:
       forecasting:
         patterns: ["*"]
 
+  - package-ecosystem: docker
+    directory: /forecasting   # base images of the forecasting Dockerfile (Python and uv)
+    schedule:
+      interval: weekly
+    ignore:
+      # A new Python release is a decision, not a bump: it changes requires-python, the lockfile and the Dockerfile
+      # together. Patch releases (3.13.x) still arrive automatically.
+      - dependency-name: "python"
+        update-types: ["version-update:semver-major", "version-update:semver-minor"]
+
   - package-ecosystem: github-actions
     directory: /
     schedule:
