@@ -1,3 +1,5 @@
+from datetime import date
+
 import pandas as pd
 import pytest
 
@@ -152,3 +154,27 @@ class TestCoverage:
         )
         with pytest.raises(ValueError, match="20725: no demand in the selection period"):
             rules.check_coverage(demand, {"20725"})
+
+
+class TestPlannedCalendar:
+    def observed(self, first, last):
+        days = pd.date_range(first, last, freq="D")
+        return pd.DataFrame({"day": days, "open": [True] * len(days)})
+
+    def test_continues_the_day_after_the_observed_calendar(self):
+        planned = rules.planned_calendar(self.observed("2011-12-01", "2011-12-08"), end=date(2011, 12, 12))
+        assert list(planned["day"].dt.strftime("%m-%d")) == ["12-09", "12-10", "12-11", "12-12"]
+        assert list(planned["open"]) == [True, False, True, True]  # 10 December 2011 is a Saturday
+
+    def test_christmas_shutdown_from_24_december_to_3_january(self):
+        planned = rules.planned_calendar(self.observed("2011-12-01", "2011-12-22"), end=date(2012, 1, 5))
+        closed = set(planned.loc[~planned["open"], "day"].dt.strftime("%Y-%m-%d"))
+        shutdown = {d.strftime("%Y-%m-%d") for d in pd.date_range("2011-12-24", "2012-01-03")}
+        assert shutdown <= closed
+        assert closed - shutdown == set()  # no Saturday falls in 23 December or 4-5 January 2012
+        assert planned.loc[planned["day"] == "2011-12-23", "open"].item()
+        assert planned.loc[planned["day"] == "2012-01-04", "open"].item()
+
+    def test_refuses_an_end_before_the_observed_calendar_ends(self):
+        with pytest.raises(ValueError, match="after the planned end"):
+            rules.planned_calendar(self.observed("2011-12-01", "2011-12-08"), end=date(2011, 12, 5))
