@@ -53,7 +53,8 @@ talks to ([ADR 0011](../docs/adr/0011-frontend-only-talks-to-bff.md)). It is the
     days, invalid imports refused without changes, the unique bucket index, days unchanged under other time zones,
     the planned part of the calendar stored per year and never zero-filled ([ADR 0029](../docs/adr/0029-planned-business-calendar.md)).
 - Seed module ([ADR 0026](../docs/adr/0026-demand-module-and-seed-loading.md)):
-  - `SeedLoaderTests` — first load, unchanged manifest skipped, changed manifest replaces the demand and updates the
+  - `SeedLoaderTests` — first load, unchanged manifest skipped, a load by an older seed format (or a record without
+    one) repeated, changed manifest replaces the demand and updates the
     products without deleting any, a file that does not match its manifest stops the load, products, demand and load
     record in one transaction, a planned calendar that does not continue the observed one stops the load, and the
     committed `seed/data/online-retail-ii` loads (54 products, calendar observed to 8 December 2011 and planned to
@@ -123,6 +124,11 @@ set it, tests do not. Every file is checked against `manifest.json`; if `seed_lo
 nothing happens, otherwise, in one transaction, products are registered in inventory, demand data is replaced and the
 load is recorded. A file that does not match
 its manifest stops the application: regenerate the seed with `seed/derive` instead of editing it.
+
+`seed_loads` also records `SeedLoader.SEED_FORMAT`, the version of how the loader reads a dataset. **Increment it
+whenever the same files would now be loaded differently** (a file starts being read, a column changes meaning): the
+seed is reloaded when the manifest or the format changes, and the log says which. Without it, files loaded once by older
+code (an older image, another branch) would never be reloaded by newer code.
 
 ## Run
 

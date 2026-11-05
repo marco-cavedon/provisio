@@ -20,7 +20,8 @@ import org.springframework.transaction.support.TransactionTemplate;
  * <ol>
  *   <li>Every file is checked against {@code manifest.json}: a hand-edited or truncated file stops the
  *       application.</li>
- *   <li>If {@code seed_loads} records the same manifest, nothing happens: restarts are cheap.</li>
+ *   <li>If {@code seed_loads} records the same manifest and the same {@link #SEED_FORMAT}, nothing happens:
+ *       restarts are cheap.</li>
  *   <li>Otherwise, in one transaction: products are registered in inventory (inserted or updated, never deleted,
  *       ADR 0027), the demand history and calendar are replaced, and the load is recorded. A failure leaves the
  *       previous version intact.</li>
@@ -31,6 +32,19 @@ import org.springframework.transaction.support.TransactionTemplate;
 class SeedLoader implements ApplicationRunner {
 
   enum Outcome { LOADED, UNCHANGED }
+
+  /**
+   * Version of how this loader reads a dataset. Increment it whenever the same files would now be loaded differently,
+   * for example when a file starts being read: the manifest checksum alone says whether the data changed, not whether
+   * the way of loading it did. Without it, a dataset loaded once by older code (an older image, another branch) is
+   * never reloaded by newer code.
+   *
+   * <ol>
+   *   <li>calendar, daily demand and products (ADR 0026, ADR 0027);</li>
+   *   <li>also the planned calendar (ADR 0029).</li>
+   * </ol>
+   */
+  static final int SEED_FORMAT = 2;
 
   private static final Logger log = LoggerFactory.getLogger(SeedLoader.class);
 
@@ -57,14 +71,20 @@ class SeedLoader implements ApplicationRunner {
   Outcome load() {
     SeedManifest manifest = SeedManifest.read(dir);
     SeedLoadDocument loaded = mongoTemplate.findById(manifest.dataset(), SeedLoadDocument.class);
-    if (loaded != null && loaded.manifestSha256().equals(manifest.sha256())) {
+    boolean sameManifest = loaded != null && loaded.manifestSha256().equals(manifest.sha256());
+    boolean sameFormat = loaded != null && loaded.formatOrFirst() == SEED_FORMAT;
+    if (sameManifest && sameFormat) {
       log.info("Seed {} already loaded on {}, unchanged", manifest.dataset(), loaded.loadedAt());
       return Outcome.UNCHANGED;
     }
+    log.info("Seed {}: {}", manifest.dataset(), loaded == null ? "not loaded yet"
+        : !sameManifest ? "manifest changed since " + loaded.loadedAt()
+        : "loaded on " + loaded.loadedAt() + " with seed format " + loaded.formatOrFirst() + ", now "
+            + SEED_FORMAT);
 
     ProductSeed products = ProductSeed.from(manifest);
     DemandSeed demand = DemandSeed.from(manifest);
-    SeedLoadDocument record = new SeedLoadDocument(manifest.dataset(), manifest.sha256(),
+    SeedLoadDocument record = new SeedLoadDocument(manifest.dataset(), manifest.sha256(), SEED_FORMAT,
         products.products().size() + demand.rows(), Instant.now().truncatedTo(ChronoUnit.MILLIS));
     ProductRegistration registration = transaction.execute(status -> {
       ProductRegistration registered = inventory.registerProducts(products.products());
