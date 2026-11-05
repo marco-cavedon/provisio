@@ -26,7 +26,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
+import org.springframework.data.mongodb.core.query.Update;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
@@ -97,6 +99,7 @@ class SeedLoaderTests {
     assertThat(inventoryQueries.findProduct("A")).contains(new Product("A", "BAG A", "BAGS", "EA"));
     assertThat(inventoryQueries.findStockLevel("B")).contains(new StockLevel("B", 0, null));
     assertThat(record.loadedAt()).isNotNull();
+    assertThat(record.format()).isEqualTo(SeedLoader.SEED_FORMAT);
   }
 
   @Test
@@ -105,6 +108,31 @@ class SeedLoaderTests {
     loader(dir).load();
 
     assertThat(loader(dir).load()).isEqualTo(Outcome.UNCHANGED);
+  }
+
+  @Test
+  void sameManifestLoadedWithAnOlderFormatIsLoadedAgain() throws IOException {
+    writeDataset("A,2011-01-03,5\n");
+    loader(dir).load();
+    // As if older code had loaded these files: same manifest, earlier format
+    mongoTemplate.updateFirst(Query.query(Criteria.where("_id").is("test-dataset")),
+        new Update().set("format", SeedLoader.SEED_FORMAT - 1), SeedLoadDocument.class);
+
+    assertThat(loader(dir).load()).isEqualTo(Outcome.LOADED);
+    assertThat(mongoTemplate.findById("test-dataset", SeedLoadDocument.class).format())
+        .isEqualTo(SeedLoader.SEED_FORMAT);
+  }
+
+  @Test
+  void recordWithoutFormatCountsAsTheFirstFormat() throws IOException {
+    writeDataset("A,2011-01-03,5\n");
+    loader(dir).load();
+    // Records written before the field existed
+    mongoTemplate.updateFirst(Query.query(Criteria.where("_id").is("test-dataset")), new Update().unset("format"),
+        SeedLoadDocument.class);
+
+    assertThat(mongoTemplate.findById("test-dataset", SeedLoadDocument.class).formatOrFirst()).isEqualTo(1);
+    assertThat(loader(dir).load()).isEqualTo(Outcome.LOADED);
   }
 
   @Test
