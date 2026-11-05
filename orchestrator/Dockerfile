@@ -18,7 +18,7 @@
 # over time; Dependabot proposes the updates (.github/dependabot.yml). All three stages use the same release.
 
 # ---------------------------------------------------------------- build
-FROM --platform=$BUILDPLATFORM eclipse-temurin:21.0.12.1_1-jdk-resolute AS build
+FROM --platform=$BUILDPLATFORM eclipse-temurin:21.0.13_9-jdk-resolute AS build
 WORKDIR /workspace/orchestrator
 
 COPY --from=contracts forecasting /workspace/contracts/forecasting
@@ -33,13 +33,13 @@ RUN --mount=type=cache,target=/root/.m2 \
     && cp target/provisio-orchestrator-*.jar application.jar
 
 # ---------------------------------------------------------------- extract layers
-FROM --platform=$BUILDPLATFORM eclipse-temurin:21.0.12.1_1-jre-resolute AS extract
+FROM --platform=$BUILDPLATFORM eclipse-temurin:21.0.13_9-jre-resolute AS extract
 WORKDIR /extract
 COPY --from=build /workspace/orchestrator/application.jar application.jar
 RUN java -Djarmode=tools -jar application.jar extract --layers --launcher --destination layers
 
 # ---------------------------------------------------------------- runtime
-FROM eclipse-temurin:21.0.12.1_1-jre-resolute
+FROM eclipse-temurin:21.0.13_9-jre-resolute
 RUN groupadd --system --gid 10001 provisio \
     && useradd --system --uid 10001 --gid provisio --no-create-home provisio
 WORKDIR /application
