@@ -9,7 +9,7 @@ import java.util.Optional;
  */
 public interface DemandQueries {
 
-  /** The opening calendar, empty if no demand history has been loaded. */
+  /** The opening calendar, observed and planned (ADR 0029), empty if no demand history has been loaded. */
   Optional<BusinessCalendar> calendar();
 
   /**
@@ -18,7 +18,8 @@ public interface DemandQueries {
    *
    * <p>A product without history gets a series of zeros: whether it exists is the inventory module's concern.
    *
-   * @throws IllegalArgumentException if the range is reversed or not covered by the calendar
+   * @throws IllegalArgumentException if the range is reversed or not within the observed part of the calendar: planned
+   *     days have no demand yet
    * @throws IllegalStateException if no demand history has been loaded
    */
   List<DailyDemand> dailyDemand(String sku, LocalDate from, LocalDate endExclusive);

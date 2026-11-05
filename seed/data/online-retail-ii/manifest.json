@@ -26,6 +26,8 @@
     "skus": 54,
     "calendarDays": 738,
     "openDays": 603,
+    "plannedCalendarDays": 54,
+    "plannedOpenDays": 37,
     "orderedQuantity": 802330,
     "cancelledQuantityMatched": 6997,
     "cancelledQuantityUnmatched": 5560,
@@ -39,6 +41,10 @@
     "daily-demand.csv": {
       "sha256": "6ed26d67f0224b424cfb867876e9338b3ca446a407345e227103be5d0839599a",
       "rows": 21277
+    },
+    "planned-calendar.csv": {
+      "sha256": "b607d681f2d6db3c46634c80d6f5620d045def7404c77e138cdac2b29bc38d25",
+      "rows": 54
     },
     "skus.csv": {
       "sha256": "5fc8d75246baf8976f3bd3bc86e9c4bf59956b0430f43f993217fade70a51b0e",

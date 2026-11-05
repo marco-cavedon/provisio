@@ -1,0 +1,9 @@
+# Only what the build stage copies is sent to the builder: project metadata, lockfile and sources.
+# The Dockerfile itself must not be excluded: the Docker CLI tolerates it, but Testcontainers (docker-java), which
+# builds this image in the orchestrator's process tests, refuses to build.
+*
+!Dockerfile
+!pyproject.toml
+!uv.lock
+!src/
+**/__pycache__

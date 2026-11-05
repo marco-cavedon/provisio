@@ -1,5 +1,6 @@
 package io.github.marcocavedon.provisio.inventory;
 
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -21,4 +22,10 @@ public interface InventoryQueries {
    * @return empty if the SKU is not a known product
    */
   Optional<Product> findProduct(String sku);
+
+  /**
+   * Every known product, ordered by SKU. The catalogue is small (one category, ADR 0002); a larger one would need
+   * paging.
+   */
+  List<Product> products();
 }

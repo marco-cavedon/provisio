@@ -26,7 +26,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
+import org.springframework.data.mongodb.core.query.Update;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
@@ -88,10 +90,16 @@ class SeedLoaderTests {
     SeedLoadDocument record = mongoTemplate.findById("test-dataset", SeedLoadDocument.class);
     assertThat(record).isNotNull();
     assertThat(record.manifestSha256()).isEqualTo(SeedManifest.sha256(Files.readAllBytes(dir.resolve("manifest.json"))));
-    assertThat(record.rows()).isEqualTo(2 + 4 + 2);
+    // Products, calendar days (observed and planned), demand entries
+    assertThat(record.rows()).isEqualTo(2 + 6 + 2);
+    var calendar = demandQueries.calendar().orElseThrow();
+    assertThat(calendar.observedTo()).isEqualTo(LocalDate.of(2011, 1, 6));
+    assertThat(calendar.to()).isEqualTo(LocalDate.of(2011, 1, 8));
+    assertThat(calendar.isOpen(LocalDate.of(2011, 1, 8))).isFalse();
     assertThat(inventoryQueries.findProduct("A")).contains(new Product("A", "BAG A", "BAGS", "EA"));
     assertThat(inventoryQueries.findStockLevel("B")).contains(new StockLevel("B", 0, null));
     assertThat(record.loadedAt()).isNotNull();
+    assertThat(record.format()).isEqualTo(SeedLoader.SEED_FORMAT);
   }
 
   @Test
@@ -100,6 +108,31 @@ class SeedLoaderTests {
     loader(dir).load();
 
     assertThat(loader(dir).load()).isEqualTo(Outcome.UNCHANGED);
+  }
+
+  @Test
+  void sameManifestLoadedWithAnOlderFormatIsLoadedAgain() throws IOException {
+    writeDataset("A,2011-01-03,5\n");
+    loader(dir).load();
+    // As if older code had loaded these files: same manifest, earlier format
+    mongoTemplate.updateFirst(Query.query(Criteria.where("_id").is("test-dataset")),
+        new Update().set("format", SeedLoader.SEED_FORMAT - 1), SeedLoadDocument.class);
+
+    assertThat(loader(dir).load()).isEqualTo(Outcome.LOADED);
+    assertThat(mongoTemplate.findById("test-dataset", SeedLoadDocument.class).format())
+        .isEqualTo(SeedLoader.SEED_FORMAT);
+  }
+
+  @Test
+  void recordWithoutFormatCountsAsTheFirstFormat() throws IOException {
+    writeDataset("A,2011-01-03,5\n");
+    loader(dir).load();
+    // Records written before the field existed
+    mongoTemplate.updateFirst(Query.query(Criteria.where("_id").is("test-dataset")), new Update().unset("format"),
+        SeedLoadDocument.class);
+
+    assertThat(mongoTemplate.findById("test-dataset", SeedLoadDocument.class).formatOrFirst()).isEqualTo(1);
+    assertThat(loader(dir).load()).isEqualTo(Outcome.LOADED);
   }
 
   @Test
@@ -131,6 +164,15 @@ class SeedLoaderTests {
     assertThat(mongoTemplate.findById("test-dataset", SeedLoadDocument.class).manifestSha256()).isEqualTo(loaded);
     assertThat(demandQueries.dailyDemand("A", LocalDate.of(2011, 1, 3), LocalDate.of(2011, 1, 4)))
         .extracting(DailyDemand::quantity).containsExactly(5);
+  }
+
+  @Test
+  void plannedCalendarThatDoesNotContinueTheObservedOneStopsTheLoad() throws IOException {
+    writeDataset("A,2011-01-03,5\n", "A,BAG A,BAGS,EA\n", "day,open\n2011-01-08,true\n");
+
+    assertThatThrownBy(() -> loader(dir).load())
+        .isInstanceOf(IllegalStateException.class).hasMessageContaining("must start on 2011-01-07");
+    assertThat(demandQueries.calendar()).isEmpty();
   }
 
   @Test
@@ -169,12 +211,15 @@ class SeedLoaderTests {
 
     var calendar = demandQueries.calendar().orElseThrow();
     assertThat(calendar.from()).isEqualTo(LocalDate.of(2009, 12, 1));
-    assertThat(calendar.to()).isEqualTo(LocalDate.of(2011, 12, 8));
-    assertThat(calendar.closedDays()).hasSize(135);
-    assertThat(mongoTemplate.getCollection("business_calendar").countDocuments()).isEqualTo(3);
+    assertThat(calendar.observedTo()).isEqualTo(LocalDate.of(2011, 12, 8));
+    // Planned up to 31 January 2012 (ADR 0029): 17 more closed days, Saturdays and the Christmas shutdown
+    assertThat(calendar.to()).isEqualTo(LocalDate.of(2012, 1, 31));
+    assertThat(calendar.closedDays()).hasSize(135 + 17);
+    assertThat(calendar.openDays(LocalDate.of(2011, 12, 9), LocalDate.of(2012, 2, 1))).hasSize(37);
+    assertThat(mongoTemplate.getCollection("business_calendar").countDocuments()).isEqualTo(4);
     // Every series covers the open days only. Saturdays are almost all closed, but not all: the store traded on
     // Saturday 5 December 2009, so the check is against the calendar, not the day of the week.
-    assertThat(demandQueries.dailyDemand("85099B", calendar.from(), calendar.to().plusDays(1)))
+    assertThat(demandQueries.dailyDemand("85099B", calendar.from(), calendar.observedTo().plusDays(1)))
         .hasSize(603)
         .allMatch(day -> calendar.isOpen(day.day()))
         .anyMatch(day -> day.day().equals(LocalDate.of(2009, 12, 5)));
@@ -189,12 +234,18 @@ class SeedLoaderTests {
   }
 
   /**
-   * Writes a dataset like seed/derive does: calendar 2011-01-03..2011-01-06 (all open), the given demand and product
-   * rows, and a manifest with their checksums.
+   * Writes a dataset like seed/derive does: observed calendar 2011-01-03..2011-01-06 (all open), planned calendar
+   * 2011-01-07 (open) and 2011-01-08 (closed), the given demand and product rows, and a manifest with their checksums.
    */
   private void writeDataset(String demandRows, String productRows) throws IOException {
+    writeDataset(demandRows, productRows, "day,open\n2011-01-07,true\n2011-01-08,false\n");
+  }
+
+  /** As above, with the given planned calendar after the observed one (2011-01-03..2011-01-06). */
+  private void writeDataset(String demandRows, String productRows, String plannedCalendar) throws IOException {
     Map<String, String> files = new LinkedHashMap<>();
     files.put("calendar.csv", "day,open\n2011-01-03,true\n2011-01-04,true\n2011-01-05,true\n2011-01-06,true\n");
+    files.put("planned-calendar.csv", plannedCalendar);
     files.put("daily-demand.csv", "sku,day,quantity\n" + demandRows);
     files.put("skus.csv", "sku,description,category,unit\n" + productRows);
     StringBuilder listed = new StringBuilder();

@@ -5,6 +5,11 @@
 # Layers go from least to most frequently changed, so a code change rebuilds only the last one.
 # Tests are skipped here: they need Docker and run in CI (orchestrator workflow) and with ./mvnw verify.
 #
+# The build generates the forecasting client from contracts/forecasting/openapi.yaml, which is outside this folder.
+# It comes in as the named build context "contracts" (docker-compose.yml, CI and release workflows:
+# --build-context contracts=contracts), so the build context stays this folder and the POM finds the contract at
+# ../contracts, as it does outside Docker.
+#
 # Multi-platform (linux/amd64, linux/arm64; release workflow): the jar is platform-independent bytecode, so the build
 # and extract stages run once on the builder's native platform ($BUILDPLATFORM). Only the runtime stage is built per
 # target platform, and its only RUN step is the user creation, so emulation never runs Maven.
@@ -13,9 +18,10 @@
 # over time; Dependabot proposes the updates (.github/dependabot.yml). All three stages use the same release.
 
 # ---------------------------------------------------------------- build
-FROM --platform=$BUILDPLATFORM eclipse-temurin:21.0.12.1_1-jdk-resolute AS build
-WORKDIR /workspace
+FROM --platform=$BUILDPLATFORM eclipse-temurin:21.0.13_9-jdk-resolute AS build
+WORKDIR /workspace/orchestrator
 
+COPY --from=contracts forecasting /workspace/contracts/forecasting
 COPY mvnw pom.xml ./
 COPY .mvn .mvn
 COPY src/main src/main
@@ -27,13 +33,13 @@ RUN --mount=type=cache,target=/root/.m2 \
     && cp target/provisio-orchestrator-*.jar application.jar
 
 # ---------------------------------------------------------------- extract layers
-FROM --platform=$BUILDPLATFORM eclipse-temurin:21.0.12.1_1-jre-resolute AS extract
+FROM --platform=$BUILDPLATFORM eclipse-temurin:21.0.13_9-jre-resolute AS extract
 WORKDIR /extract
-COPY --from=build /workspace/application.jar application.jar
+COPY --from=build /workspace/orchestrator/application.jar application.jar
 RUN java -Djarmode=tools -jar application.jar extract --layers --launcher --destination layers
 
 # ---------------------------------------------------------------- runtime
-FROM eclipse-temurin:21.0.12.1_1-jre-resolute
+FROM eclipse-temurin:21.0.13_9-jre-resolute
 RUN groupadd --system --gid 10001 provisio \
     && useradd --system --uid 10001 --gid provisio --no-create-home provisio
 WORKDIR /application

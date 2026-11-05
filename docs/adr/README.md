@@ -33,5 +33,7 @@ ADRs are immutable once accepted: a changed decision gets a **new** ADR that sup
 | [0026](0026-demand-module-and-seed-loading.md) | Demand data model and seed loading | Accepted |
 | [0027](0027-products-from-the-seed-are-never-deleted.md) | Products from the seed are registered, never deleted | Accepted |
 | [0028](0028-forecasting-contract-and-toolchain.md) | Forecasting contract and toolchain | Accepted |
+| [0029](0029-planned-business-calendar.md) | Planned business calendar beyond the observed data | Accepted |
+| [0030](0030-forecasting-module-and-batch.md) | Forecasting module and forecast batch | Accepted |
 
 New ADRs start from [`template.md`](template.md).

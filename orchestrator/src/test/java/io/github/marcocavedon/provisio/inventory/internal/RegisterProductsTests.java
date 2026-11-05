@@ -46,6 +46,13 @@ class RegisterProductsTests {
   }
 
   @Test
+  void listsEveryProductOrderedBySku() {
+    operations.registerProducts(List.of(JUMBO_BAG, LUNCH_BAG));
+
+    assertThat(queries.products()).containsExactly(LUNCH_BAG, JUMBO_BAG);
+  }
+
+  @Test
   void insertsNewProducts() {
     ProductRegistration result = operations.registerProducts(List.of(LUNCH_BAG, JUMBO_BAG));
 

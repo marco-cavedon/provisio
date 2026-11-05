@@ -26,7 +26,9 @@ import java.util.Optional;
 import java.util.Set;
 import org.bson.types.ObjectId;
 import org.springframework.dao.DuplicateKeyException;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.data.mongodb.core.query.Update;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
@@ -77,6 +79,13 @@ class InventoryService implements InventoryQueries, InventoryOperations {
   public Optional<Product> findProduct(String sku) {
     Objects.requireNonNull(sku, "sku");
     return Optional.ofNullable(mongoTemplate.findById(sku, ProductDocument.class)).map(ProductDocument::toProduct);
+  }
+
+  @Override
+  public List<Product> products() {
+    return mongoTemplate.find(new Query().with(Sort.by("_id")), ProductDocument.class).stream()
+        .map(ProductDocument::toProduct)
+        .toList();
   }
 
   @Override

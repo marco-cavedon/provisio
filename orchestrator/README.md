@@ -38,15 +38,27 @@ talks to ([ADR 0011](../docs/adr/0011-frontend-only-talks-to-bff.md)). It is the
     needed).
   - `GetStockLevelWorkerProcessTests` — the worker through the real invocation path: Camunda Process Test runs a
     one-task test process (`src/test/resources/bpmn`) on a Camunda engine in Docker, against MongoDB in Docker.
+- Forecasting module ([ADR 0030](../docs/adr/0030-forecasting-module-and-batch.md)):
+  - `ForecastingClientTests` — the request the contract defines, the OK and FAILED mappings, HTTP failures classified
+    as retry or no retry, against a mocked server (no Docker needed).
+  - `ForecastBatchTests` — chunks, one stored version per product, resumption after a failure, no duplicate under a
+    concurrent attempt, rejected dates, the latest version as of a date, indexes; the service replaced by a fake.
+  - `RunForecastBatchWorkerTests` — business date, run identifier and output of the worker (no Docker needed).
+  - `RunForecastBatchWorkerProcessTests` — the worker end to end: Camunda, MongoDB and the real forecasting service,
+    built from `forecasting/Dockerfile` (the first run builds the image).
 - `LocalDateConversionsTests` — a calendar day is stored at midnight UTC whatever the JVM's default time zone
   (no Docker needed).
 - Demand module ([ADR 0026](../docs/adr/0026-demand-module-and-seed-loading.md)):
   - `DemandServiceTests` — monthly buckets and yearly calendar documents as stored, zero-filled series without closed
-    days, invalid imports refused without changes, the unique bucket index, days unchanged under other time zones.
+    days, invalid imports refused without changes, the unique bucket index, days unchanged under other time zones,
+    the planned part of the calendar stored per year and never zero-filled ([ADR 0029](../docs/adr/0029-planned-business-calendar.md)).
 - Seed module ([ADR 0026](../docs/adr/0026-demand-module-and-seed-loading.md)):
-  - `SeedLoaderTests` — first load, unchanged manifest skipped, changed manifest replaces the demand and updates the
+  - `SeedLoaderTests` — first load, unchanged manifest skipped, a load by an older seed format (or a record without
+    one) repeated, changed manifest replaces the demand and updates the
     products without deleting any, a file that does not match its manifest stops the load, products, demand and load
-    record in one transaction, and the committed `seed/data/online-retail-ii` loads (54 products).
+    record in one transaction, a planned calendar that does not continue the observed one stops the load, and the
+    committed `seed/data/online-retail-ii` loads (54 products, calendar observed to 8 December 2011 and planned to
+    31 January 2012).
 
 Integration tests share one Spring context and one MongoDB container: keep their `@SpringBootTest` properties and
 imports identical, or each variant starts its own.
@@ -82,8 +94,28 @@ Daily demand per product and the store's opening calendar ([ADR 0025](../docs/ad
   and `business_calendar` one document per year.
 - **Zeros are filled in one place:** `DemandQueries.dailyDemand` returns one entry per open day, zero where nothing
   was sold, and omits closed days.
+- **Observed and planned calendar** ([ADR 0029](../docs/adr/0029-planned-business-calendar.md)): `BusinessCalendar`
+  is observed up to `observedTo` and planned after it. Planned days say whether the store will open, for forecasting;
+  they have no demand, so `dailyDemand` refuses a range that reaches them instead of returning zeros.
 - **Calendar days** are `LocalDate` in Java and a `Date` at midnight UTC in MongoDB, through the converters in
   `MongoConfiguration`. Never store a day through any other path.
+
+## Forecasting module
+
+The forecast batch and its versioned forecasts ([ADR 0006](../docs/adr/0006-precomputed-forecast-with-on-demand-recompute.md),
+[ADR 0030](../docs/adr/0030-forecasting-module-and-batch.md)). Other modules use `ForecastQueries`; the client of the
+forecasting service is generated from [`contracts/forecasting/openapi.yaml`](../contracts/forecasting/openapi.yaml)
+at build time (`./mvnw generate-sources` refreshes it in the IDE) and stays internal.
+
+- **Job worker** `provisio.forecasting.run-batch`: input `asOf` (ISO date), output
+  `forecastRun {runId, asOf, horizonEnd, requested, ok, failed}`. Service unavailable: the engine retries and the run
+  resumes. A run that cannot succeed (no `asOf`, dates outside the calendar, a request the service rejects): an
+  incident at once.
+- **Idempotent:** the run identifier comes from the element instance key, and a forecast's `_id` is `runId:sku`, so a
+  retried or duplicated job never stores a product twice.
+- **Configuration** `provisio.forecasting.*` in `application.yaml`: service URL (`PROVISIO_FORECASTING_BASEURL` in
+  Compose), timeouts, chunk size, horizon and the default replenishment policy, a placeholder until supplier data
+  exists. Every forecast stores the policy it was computed with.
 
 ## Seed module
 
@@ -92,6 +124,11 @@ set it, tests do not. Every file is checked against `manifest.json`; if `seed_lo
 nothing happens, otherwise, in one transaction, products are registered in inventory, demand data is replaced and the
 load is recorded. A file that does not match
 its manifest stops the application: regenerate the seed with `seed/derive` instead of editing it.
+
+`seed_loads` also records `SeedLoader.SEED_FORMAT`, the version of how the loader reads a dataset. **Increment it
+whenever the same files would now be loaded differently** (a file starts being read, a column changes meaning): the
+seed is reloaded when the manifest or the format changes, and the log says which. Without it, files loaded once by older
+code (an older image, another branch) would never be reloaded by newer code.
 
 ## Run
 
