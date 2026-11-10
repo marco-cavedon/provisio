@@ -13,6 +13,7 @@ import io.github.marcocavedon.provisio.forecasting.Forecast;
 import io.github.marcocavedon.provisio.forecasting.ForecastQueries;
 import io.github.marcocavedon.provisio.forecasting.ReplenishmentPolicy;
 import io.github.marcocavedon.provisio.forecasting.ReplenishmentPolicy.LeadTime;
+import io.github.marcocavedon.provisio.forecasting.internal.ForecastBatch.CompletedRun;
 import io.github.marcocavedon.provisio.forecasting.internal.ForecastBatch.RunRequest;
 import io.github.marcocavedon.provisio.forecasting.internal.ForecastBatch.RunSummary;
 import io.github.marcocavedon.provisio.forecasting.internal.ForecastingProperties.DefaultPolicy;
@@ -229,6 +230,42 @@ class ForecastBatchTests {
   }
 
   @Test
+  void completedRunIsTheLatestCompletedRunOfTheBusinessDate() {
+    assertThat(batch(28).completedRun(AS_OF)).isEmpty();
+
+    batch(28, NOW).run(request("batch-1", AS_OF));
+    batch(28, NOW.plusSeconds(60)).run(request("batch-2", AS_OF));
+    batch(28, NOW.plusSeconds(120)).run(request("batch-3", AS_OF.minusDays(1)));
+
+    assertThat(batch(28).completedRun(AS_OF)).contains(new CompletedRun("batch-2", AS_OF, LocalDate.of(2011, 7, 28),
+        3, 3, 0, NOW.plusSeconds(60)));
+    assertThat(batch(28).completedRun(AS_OF.minusDays(1))).map(CompletedRun::runId).contains("batch-3");
+    assertThat(batch(28).completedRun(AS_OF.minusDays(2))).isEmpty();
+  }
+
+  @Test
+  void aRunStillRunningIsNotACompletedRun() {
+    forecaster.unavailableOnCall(1);
+    assertThatThrownBy(() -> batch(28).run(request("batch-1", AS_OF)))
+        .isInstanceOf(ForecastingUnavailableException.class);
+
+    assertThat(raw(ForecastRunDocument.COLLECTION)).singleElement()
+        .satisfies(run -> assertThat(run.getString("status")).isEqualTo("RUNNING"));
+    assertThat(batch(28).completedRun(AS_OF)).isEmpty();
+  }
+
+  @Test
+  void aCompletedRunCountsEvenIfEveryProductFailed() {
+    forecaster.failing("A", "B", "C");
+    batch(28).run(request("batch-1", AS_OF));
+
+    assertThat(batch(28).completedRun(AS_OF)).hasValueSatisfying(run -> {
+      assertThat(run.ok()).isZero();
+      assertThat(run.failed()).isEqualTo(3);
+    });
+  }
+
+  @Test
   void createsTheIndexesIdempotently() {
     List<Document> found = mongoTemplate.getCollection(ForecastDocument.COLLECTION).listIndexes()
         .into(new ArrayList<>());
@@ -239,14 +276,25 @@ class ForecastBatchTests {
     });
     assertThat(found).anySatisfy(index ->
         assertThat(index.getString("name")).isEqualTo(ForecastIndexes.FORECASTS_BY_RUN));
+    List<Document> runIndexes = mongoTemplate.getCollection(ForecastRunDocument.COLLECTION).listIndexes()
+        .into(new ArrayList<>());
+    assertThat(runIndexes).anySatisfy(index -> {
+      assertThat(index.getString("name")).isEqualTo(ForecastIndexes.RUNS_BY_AS_OF_STATUS_AND_TIME);
+      assertThat(index.get("key", Document.class))
+          .isEqualTo(new Document("asOf", 1).append("status", 1).append("completedAt", -1));
+    });
     assertThatCode(indexes::createIndexes).doesNotThrowAnyException();
   }
 
   private ForecastBatch batch(int horizonDays) {
+    return batch(horizonDays, NOW);
+  }
+
+  private ForecastBatch batch(int horizonDays, Instant now) {
     ForecastingProperties properties = new ForecastingProperties(URI.create("http://unused"), Duration.ofSeconds(1),
         Duration.ofSeconds(1), 2, horizonDays, new DefaultPolicy(14, null, 7, 0.95));
     return new ForecastBatch(demandQueries, inventoryQueries, forecaster, mongoTemplate, properties,
-        Clock.fixed(NOW, ZoneOffset.UTC));
+        Clock.fixed(now, ZoneOffset.UTC));
   }
 
   private static RunRequest request(String runId, LocalDate asOf) {

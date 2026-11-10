@@ -42,10 +42,14 @@ talks to ([ADR 0011](../docs/adr/0011-frontend-only-talks-to-bff.md)). It is the
   - `ForecastingClientTests` — the request the contract defines, the OK and FAILED mappings, HTTP failures classified
     as retry or no retry, against a mocked server (no Docker needed).
   - `ForecastBatchTests` — chunks, one stored version per product, resumption after a failure, no duplicate under a
-    concurrent attempt, rejected dates, the latest version as of a date, indexes; the service replaced by a fake.
+    concurrent attempt, rejected dates, the latest version as of a date, the latest completed run of a date (running
+    runs ignored, all-failed runs counted), indexes; the service replaced by a fake.
   - `RunForecastBatchWorkerTests` — business date, run identifier and output of the worker (no Docker needed).
   - `RunForecastBatchWorkerProcessTests` — the worker end to end: Camunda, MongoDB and the real forecasting service,
     built from `forecasting/Dockerfile` (the first run builds the image).
+  - `FindCompletedRunWorkerTests` — output of `provisio.forecasting.find-completed-run` found and not found, invalid
+    `asOf` (no Docker needed).
+  - `FindCompletedRunWorkerProcessTests` — the worker through the real invocation path, on Camunda and MongoDB.
 - Time module ([ADR 0031](../docs/adr/0031-business-time.md)):
   - `ConfiguredBusinessClockTests` — the mapped rule around the end of the data, the year boundary and 29 February,
     and the fixed mode (no Docker needed).
@@ -118,6 +122,11 @@ at build time (`./mvnw generate-sources` refreshes it in the IDE) and stays inte
   `forecastRun {runId, asOf, horizonEnd, requested, ok, failed}`. Service unavailable: the engine retries and the run
   resumes. A run that cannot succeed (no `asOf`, dates outside the calendar, a request the service rejects): an
   incident at once.
+- **Job worker** `provisio.forecasting.find-completed-run`: input `asOf`, output always `completedRun`:
+  `{found: true, runId, asOf, horizonEnd, requested, ok, failed, completedAt}` for the latest completed run of that date,
+  or `{found: false, asOf}`. The timer path of the batch process skips a date that already has one: the timer never
+  repeats a date, a recompute goes through the message start event. Running runs do not count; a completed run counts
+  even if every product failed.
 - **Idempotent:** the run identifier comes from the element instance key, and a forecast's `_id` is `runId:sku`, so a
   retried or duplicated job never stores a product twice.
 - **Configuration** `provisio.forecasting.*` in `application.yaml`: service URL (`PROVISIO_FORECASTING_BASEURL` in
