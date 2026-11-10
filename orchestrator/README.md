@@ -46,6 +46,13 @@ talks to ([ADR 0011](../docs/adr/0011-frontend-only-talks-to-bff.md)). It is the
   - `RunForecastBatchWorkerTests` — business date, run identifier and output of the worker (no Docker needed).
   - `RunForecastBatchWorkerProcessTests` — the worker end to end: Camunda, MongoDB and the real forecasting service,
     built from `forecasting/Dockerfile` (the first run builds the image).
+- Time module ([ADR 0031](../docs/adr/0031-business-time.md)):
+  - `ConfiguredBusinessClockTests` — the mapped rule around the end of the data, the year boundary and 29 February,
+    and the fixed mode (no Docker needed).
+  - `BusinessTimePropertiesTests` — the settings as Spring binds them, and every invalid combination refused (no
+    Docker needed).
+  - `GetBusinessDateWorkerTests` — the output of `provisio.time.get-business-date` (no Docker needed).
+  - `GetBusinessDateWorkerProcessTests` — the worker through the real invocation path, on Camunda in Docker.
 - `LocalDateConversionsTests` — a calendar day is stored at midnight UTC whatever the JVM's default time zone
   (no Docker needed).
 - Demand module ([ADR 0026](../docs/adr/0026-demand-module-and-seed-loading.md)):
@@ -116,6 +123,23 @@ at build time (`./mvnw generate-sources` refreshes it in the IDE) and stays inte
 - **Configuration** `provisio.forecasting.*` in `application.yaml`: service URL (`PROVISIO_FORECASTING_BASEURL` in
   Compose), timeouts, chunk size, horizon and the default replenishment policy, a placeholder until supplier data
   exists. Every forecast stores the policy it was computed with.
+
+## Time module
+
+The business date ([ADR 0031](../docs/adr/0031-business-time.md)): the day the demo store lives in, inside the sales
+data, not the wall-clock date. Other modules use `BusinessClock`; the wall-clock `Clock` stays for timestamps.
+
+- **Job worker** `provisio.time.get-business-date`: no input, output `businessDate` (ISO date). A process calls it once,
+  at its start, and maps it to its own variable (the forecast batch to `asOf`). **Read the business date once per
+  process instance** and pass it on; workers never read the clock themselves.
+- **Configuration** `provisio.business-time.*` in `application.yaml`:
+  - `mode: mapped` (default) — today's UTC date moved into 2011 (`mapped.year`); from 10 to 31 December, after
+    `mapped.latest`, into 2010. Not monotonic: once a year it jumps back.
+  - `mode: fixed` with `fixed-date` — always that date, for a demo scenario or a reproduction. As environment
+    variables: `PROVISIO_BUSINESSTIME_MODE=fixed`, `PROVISIO_BUSINESSTIME_FIXEDDATE=2011-12-05` (in Compose, add them to
+    the orchestrator's `environment`).
+  - Startup fails if `fixed` has no date, if a date is set in the `mapped` mode, or if `mapped.latest` is not in
+    `mapped.year`.
 
 ## Seed module
 
