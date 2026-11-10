@@ -43,3 +43,13 @@ provisio:
       # lead-time-std-days: absent, the lead time is treated as known
       review-period-days: 7
       service-level: 0.95
+
+  # Time module (ADR 0031). The business date is inside the sales data, not the wall-clock date.
+  # mapped: today's UTC date in mapped.year, or in the year before if that falls after mapped.latest.
+  # fixed: always fixed-date (a demo scenario, a reproduction), e.g. PROVISIO_BUSINESSTIME_MODE=fixed and
+  # PROVISIO_BUSINESSTIME_FIXEDDATE=2011-12-05. Spike 003 (v0.5.0) replaces both.
+  business-time:
+    mode: mapped
+    mapped:
+      year: 2011
+      latest: 2011-12-09   # the first day after the observed data, the last asOf the forecast batch accepts
