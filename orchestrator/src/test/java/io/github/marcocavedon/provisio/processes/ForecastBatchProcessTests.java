@@ -8,7 +8,7 @@ import io.camunda.client.CamundaClient;
 import io.camunda.process.test.api.CamundaProcessTestContext;
 import io.camunda.process.test.api.CamundaSpringProcessTest;
 import io.camunda.process.test.api.assertions.ProcessInstanceSelectors;
-import io.camunda.process.test.api.mock.JobWorkerMock;
+import io.camunda.process.test.api.mock.JobWorkerMockBuilder.JobWorkerMock;
 import io.github.marcocavedon.provisio.MongoTestcontainersConfiguration;
 import java.time.Duration;
 import java.util.Map;
