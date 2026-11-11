@@ -26,6 +26,9 @@ talks to ([ADR 0011](../docs/adr/0011-frontend-only-talks-to-bff.md)). It is the
   deployment looks for them (no Docker needed). Tests do not deploy them automatically
   (`camunda.client.deployment.enabled=false` in `src/test/resources/application.properties`): each process test deploys
   what it needs.
+- `ForecastBatchProcessTests` — the product process `provisio-forecast-batch` with its real decision table, job types
+  mocked: the timer path (business date, skip when already forecast), the message path (always computes, one instance
+  per date while active), every rule of the assessment and its boundaries; elements selected by their names.
 - `MongoConfigurationTests` — the application refuses to start without a MongoDB password (no Docker needed).
 - `MongoTransactionTests` — multi-document transactions commit and, above all, roll back against a real MongoDB
   (Docker required). Without a transaction manager, `@Transactional` would be silently ignored.
