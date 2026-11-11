@@ -21,7 +21,7 @@
       <bpmn:extensionElements>
         <zeebe:taskDefinition type="provisio.forecasting.find-completed-run" />
         <zeebe:ioMapping>
-          <zeebe:input source="=&#34;2011-12-08&#34;" target="asOf" />
+          <zeebe:input source="=asOf" target="asOf" />
           <zeebe:output source="=completedRun" target="completedRun" />
         </zeebe:ioMapping>
       </bpmn:extensionElements>
@@ -74,12 +74,6 @@
   <bpmn:message id="Message_0nd5s2s" name="provisio.forecasting.batch-requested" />
   <bpmndi:BPMNDiagram id="BPMNDiagram_1">
     <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="forecast-batch">
-      <bpmndi:BPMNShape id="Event_0eb5gsf_di" bpmnElement="Event_0snzlul">
-        <dc:Bounds x="182" y="82" width="36" height="36" />
-        <bpmndi:BPMNLabel>
-          <dc:Bounds x="170" y="125" width="61" height="14" />
-        </bpmndi:BPMNLabel>
-      </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="RunBatch_di" bpmnElement="RunBatch">
         <dc:Bounds x="790" y="240" width="100" height="80" />
         <bpmndi:BPMNLabel />
@@ -103,6 +97,12 @@
           <dc:Bounds x="750" y="415" width="80" height="14" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_0eb5gsf_di" bpmnElement="Event_0snzlul">
+        <dc:Bounds x="182" y="82" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="170" y="125" width="61" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Gateway_0q8jbuz_di" bpmnElement="Gateway_0q8jbuz" isMarkerVisible="true">
         <dc:Bounds x="645" y="255" width="50" height="50" />
       </bpmndi:BPMNShape>
@@ -119,15 +119,6 @@
       <bpmndi:BPMNEdge id="Flow_start_to_batch_di" bpmnElement="Flow_start_to_batch">
         <di:waypoint x="218" y="280" />
         <di:waypoint x="270" y="280" />
-      </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Flow_1x0ftw5_di" bpmnElement="Flow_1x0ftw5">
-        <di:waypoint x="218" y="100" />
-        <di:waypoint x="670" y="100" />
-        <di:waypoint x="670" y="255" />
-      </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Flow_0g7yc26_di" bpmnElement="Flow_0g7yc26">
-        <di:waypoint x="695" y="280" />
-        <di:waypoint x="790" y="280" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_batch_to_end_di" bpmnElement="Flow_batch_to_end">
         <di:waypoint x="890" y="280" />
@@ -151,6 +142,15 @@
         <bpmndi:BPMNLabel>
           <dc:Bounds x="564" y="344.5" width="23" height="14" />
         </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0g7yc26_di" bpmnElement="Flow_0g7yc26">
+        <di:waypoint x="695" y="280" />
+        <di:waypoint x="790" y="280" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1x0ftw5_di" bpmnElement="Flow_1x0ftw5">
+        <di:waypoint x="218" y="100" />
+        <di:waypoint x="670" y="100" />
+        <di:waypoint x="670" y="255" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_19ogvke_di" bpmnElement="Flow_19ogvke">
         <di:waypoint x="370" y="280" />
