@@ -1,0 +1,237 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:zeebe="http://camunda.org/schema/zeebe/1.0" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:modeler="http://camunda.org/schema/modeler/1.0" id="Definitions_forecast_batch" targetNamespace="http://bpmn.io/schema/bpmn" exporter="Camunda Modeler" exporterVersion="5.52.0" modeler:executionPlatform="Camunda Cloud" modeler:executionPlatformVersion="8.9.0">
+  <bpmn:process id="provisio-forecast-batch" name="Forecast batch" isExecutable="true">
+    <bpmn:extensionElements>
+      <zeebe:versionTag value="1.0" />
+    </bpmn:extensionElements>
+    <bpmn:serviceTask id="RunBatch" name="Run forecast batch">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="provisio.forecasting.run-batch" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_0g7yc26</bpmn:incoming>
+      <bpmn:outgoing>Flow_batch_to_end</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:endEvent id="EndEvent_1" name="Forecasts available">
+      <bpmn:incoming>Flow_0xfaoj2</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_start_to_batch" sourceRef="StartEvent_1" targetRef="Activity_0reef1p" />
+    <bpmn:sequenceFlow id="Flow_batch_to_end" sourceRef="RunBatch" targetRef="Activity_0i2xze8" />
+    <bpmn:sequenceFlow id="Flow_0c2bgrh" sourceRef="Activity_0h1a5m0" targetRef="Gateway_0fd0e9t" />
+    <bpmn:serviceTask id="Activity_0h1a5m0" name="Find completed run">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="provisio.forecasting.find-completed-run" />
+        <zeebe:ioMapping>
+          <zeebe:input source="=asOf" target="asOf" />
+          <zeebe:output source="=completedRun" target="completedRun" />
+        </zeebe:ioMapping>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_19ogvke</bpmn:incoming>
+      <bpmn:outgoing>Flow_0c2bgrh</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:exclusiveGateway id="Gateway_0fd0e9t" name="Already forecast for asOf?" default="Flow_0a1j3p6">
+      <bpmn:extensionElements />
+      <bpmn:incoming>Flow_0c2bgrh</bpmn:incoming>
+      <bpmn:outgoing>Flow_0a1j3p6</bpmn:outgoing>
+      <bpmn:outgoing>Flow_05g4n8j</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:sequenceFlow id="Flow_0a1j3p6" name="NO" sourceRef="Gateway_0fd0e9t" targetRef="Gateway_0q8jbuz" />
+    <bpmn:endEvent id="Event_1mtca9y" name="Already forecast">
+      <bpmn:incoming>Flow_05g4n8j</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_05g4n8j" name="YES" sourceRef="Gateway_0fd0e9t" targetRef="Event_1mtca9y">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=completedRun.found = true</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:startEvent id="Event_0snzlul" name="manual start">
+      <bpmn:extensionElements />
+      <bpmn:outgoing>Flow_1x0ftw5</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="MessageEventDefinition_1gn4388" messageRef="Message_0nd5s2s" />
+    </bpmn:startEvent>
+    <bpmn:exclusiveGateway id="Gateway_0q8jbuz">
+      <bpmn:incoming>Flow_0a1j3p6</bpmn:incoming>
+      <bpmn:incoming>Flow_1x0ftw5</bpmn:incoming>
+      <bpmn:outgoing>Flow_0g7yc26</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:sequenceFlow id="Flow_0g7yc26" sourceRef="Gateway_0q8jbuz" targetRef="RunBatch" />
+    <bpmn:sequenceFlow id="Flow_1x0ftw5" sourceRef="Event_0snzlul" targetRef="Gateway_0q8jbuz" />
+    <bpmn:sequenceFlow id="Flow_19ogvke" sourceRef="Activity_0reef1p" targetRef="Activity_0h1a5m0" />
+    <bpmn:serviceTask id="Activity_0reef1p" name="Get business date">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="provisio.time.get-business-date" />
+        <zeebe:ioMapping>
+          <zeebe:output source="=businessDate" target="asOf" />
+        </zeebe:ioMapping>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_start_to_batch</bpmn:incoming>
+      <bpmn:outgoing>Flow_19ogvke</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:startEvent id="StartEvent_1" name="scheduled start">
+      <bpmn:outgoing>Flow_start_to_batch</bpmn:outgoing>
+      <bpmn:timerEventDefinition id="TimerEventDefinition_10ncj2b">
+        <bpmn:timeCycle xsi:type="bpmn:tFormalExpression">0 0 1 * * *</bpmn:timeCycle>
+      </bpmn:timerEventDefinition>
+    </bpmn:startEvent>
+    <bpmn:businessRuleTask id="Activity_0i2xze8" name="Assess forecast run">
+      <bpmn:extensionElements>
+        <zeebe:calledDecision decisionId="provisio-forecast-run-assessment" resultVariable="forecastRunAssessment" bindingType="deployment" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_batch_to_end</bpmn:incoming>
+      <bpmn:outgoing>Flow_0dq53gr</bpmn:outgoing>
+    </bpmn:businessRuleTask>
+    <bpmn:sequenceFlow id="Flow_0dq53gr" sourceRef="Activity_0i2xze8" targetRef="Gateway_0jk64x3" />
+    <bpmn:exclusiveGateway id="Gateway_0jk64x3" name="Forecast run usable?" default="Flow_1o04j6m">
+      <bpmn:incoming>Flow_0dq53gr</bpmn:incoming>
+      <bpmn:outgoing>Flow_0xfaoj2</bpmn:outgoing>
+      <bpmn:outgoing>Flow_0nm1ic6</bpmn:outgoing>
+      <bpmn:outgoing>Flow_1o04j6m</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:sequenceFlow id="Flow_0xfaoj2" name="healthy" sourceRef="Gateway_0jk64x3" targetRef="EndEvent_1">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=forecastRunAssessment.outcome = "healthy"</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:endEvent id="Event_0i2fky8" name="Forecasts degraded">
+      <bpmn:incoming>Flow_0nm1ic6</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_0nm1ic6" name="degraded" sourceRef="Gateway_0jk64x3" targetRef="Event_0i2fky8">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=forecastRunAssessment.outcome = "degraded"</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:endEvent id="Event_13u7wyo" name="Forecasts unusable">
+      <bpmn:incoming>Flow_1o04j6m</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_1o04j6m" sourceRef="Gateway_0jk64x3" targetRef="Event_13u7wyo" />
+  </bpmn:process>
+  <bpmn:message id="Message_0nd5s2s" name="provisio.forecasting.batch-requested" />
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="provisio-forecast-batch">
+      <bpmndi:BPMNShape id="Activity_15gwq79_di" bpmnElement="Activity_0h1a5m0">
+        <dc:Bounds x="410" y="240" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_0fd0e9t_di" bpmnElement="Gateway_0fd0e9t" isMarkerVisible="true">
+        <dc:Bounds x="535" y="255" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="520" y="216" width="80" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_1mtca9y_di" bpmnElement="Event_1mtca9y">
+        <dc:Bounds x="772" y="372" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="750" y="415" width="80" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_0eb5gsf_di" bpmnElement="Event_0snzlul">
+        <dc:Bounds x="182" y="82" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="170" y="125" width="61" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_0q8jbuz_di" bpmnElement="Gateway_0q8jbuz" isMarkerVisible="true">
+        <dc:Bounds x="645" y="255" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_1m62589_di" bpmnElement="Activity_0reef1p">
+        <dc:Bounds x="270" y="240" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_02lj8ok_di" bpmnElement="StartEvent_1">
+        <dc:Bounds x="182" y="262" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="163" y="305" width="75" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="RunBatch_di" bpmnElement="RunBatch">
+        <dc:Bounds x="730" y="240" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_0i2xze8_di" bpmnElement="Activity_0i2xze8">
+        <dc:Bounds x="850" y="240" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="EndEvent_1_di" bpmnElement="EndEvent_1">
+        <dc:Bounds x="1112" y="262" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1106" y="305" width="49" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_0jk64x3_di" bpmnElement="Gateway_0jk64x3" isMarkerVisible="true">
+        <dc:Bounds x="985" y="255" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1009" y="298" width="62" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_0i2fky8_di" bpmnElement="Event_0i2fky8">
+        <dc:Bounds x="1112" y="372" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1106" y="415" width="49" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_13u7wyo_di" bpmnElement="Event_13u7wyo">
+        <dc:Bounds x="1112" y="152" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1106" y="195" width="49" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_start_to_batch_di" bpmnElement="Flow_start_to_batch">
+        <di:waypoint x="218" y="280" />
+        <di:waypoint x="270" y="280" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_batch_to_end_di" bpmnElement="Flow_batch_to_end">
+        <di:waypoint x="830" y="280" />
+        <di:waypoint x="850" y="280" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0c2bgrh_di" bpmnElement="Flow_0c2bgrh">
+        <di:waypoint x="510" y="280" />
+        <di:waypoint x="535" y="280" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0a1j3p6_di" bpmnElement="Flow_0a1j3p6">
+        <di:waypoint x="585" y="280" />
+        <di:waypoint x="645" y="280" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="601" y="262" width="17" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_05g4n8j_di" bpmnElement="Flow_05g4n8j">
+        <di:waypoint x="560" y="305" />
+        <di:waypoint x="560" y="390" />
+        <di:waypoint x="772" y="390" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="564" y="345" width="23" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0g7yc26_di" bpmnElement="Flow_0g7yc26">
+        <di:waypoint x="695" y="280" />
+        <di:waypoint x="730" y="280" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1x0ftw5_di" bpmnElement="Flow_1x0ftw5">
+        <di:waypoint x="218" y="100" />
+        <di:waypoint x="670" y="100" />
+        <di:waypoint x="670" y="255" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_19ogvke_di" bpmnElement="Flow_19ogvke">
+        <di:waypoint x="370" y="280" />
+        <di:waypoint x="410" y="280" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0dq53gr_di" bpmnElement="Flow_0dq53gr">
+        <di:waypoint x="950" y="280" />
+        <di:waypoint x="985" y="280" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0xfaoj2_di" bpmnElement="Flow_0xfaoj2">
+        <di:waypoint x="1035" y="280" />
+        <di:waypoint x="1112" y="280" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1056" y="262" width="36" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0nm1ic6_di" bpmnElement="Flow_0nm1ic6">
+        <di:waypoint x="1010" y="305" />
+        <di:waypoint x="1010" y="390" />
+        <di:waypoint x="1112" y="390" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1050" y="372.5" width="47" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1o04j6m_di" bpmnElement="Flow_1o04j6m">
+        <di:waypoint x="1010" y="255" />
+        <di:waypoint x="1010" y="170" />
+        <di:waypoint x="1112" y="170" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>
