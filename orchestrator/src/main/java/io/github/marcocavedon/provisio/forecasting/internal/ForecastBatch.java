@@ -16,10 +16,13 @@ import java.time.temporal.ChronoUnit;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DuplicateKeyException;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.domain.Sort.Direction;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Update;
 import org.springframework.stereotype.Service;
@@ -99,6 +102,25 @@ public class ForecastBatch {
       store(request.runId(), asOf, horizonEnd, policy, results);
     }
     return complete(request.runId(), asOf, horizonEnd, skus.size());
+  }
+
+  /**
+   * The most recent completed run for a business date, if any: the timer path of the forecast batch process skips a
+   * date that already has one, so a recompute is always explicit, through the message start event.
+   *
+   * <p>A completed run counts whatever its outcome, even with every product {@code FAILED}; runs still {@code RUNNING}
+   * do not, so a run interrupted for good never blocks the timer. Checking and then starting a run is not atomic:
+   * acceptable, because the timer is the only caller on that path and a duplicate run costs computation, not data.
+   */
+  public Optional<CompletedRun> completedRun(LocalDate asOf) {
+    Objects.requireNonNull(asOf, "asOf");
+    // Served by the asOf_status_completedAt index: equality on asOf and status, then the sort key
+    var latest = query(where("asOf").is(asOf).and("status").is(ForecastRunDocument.COMPLETED))
+        .with(Sort.by(Direction.DESC, "completedAt"))
+        .limit(1);
+    return Optional.ofNullable(mongoTemplate.findOne(latest, ForecastRunDocument.class))
+        .map(run -> new CompletedRun(run.runId(), run.asOf(), run.horizonEnd(), run.requested(), run.ok(), run.failed(),
+            run.completedAt()));
   }
 
   private static void checkDates(BusinessCalendar calendar, LocalDate asOf, LocalDate horizonEnd) {
@@ -202,5 +224,20 @@ public class ForecastBatch {
    * @param failed products without one
    */
   public record RunSummary(String runId, LocalDate asOf, LocalDate horizonEnd, int requested, int ok, int failed) {
+  }
+
+  /**
+   * A run that completed, as {@link #completedRun(LocalDate)} finds it.
+   *
+   * @param runId the run
+   * @param asOf business date
+   * @param horizonEnd last forecast day, included
+   * @param requested products in the run
+   * @param ok products with a forecast
+   * @param failed products without one
+   * @param completedAt when it completed
+   */
+  public record CompletedRun(String runId, LocalDate asOf, LocalDate horizonEnd, int requested, int ok, int failed,
+      Instant completedAt) {
   }
 }

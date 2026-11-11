@@ -21,6 +21,8 @@ class ForecastIndexes implements InitializingBean {
   static final String FORECASTS_BY_SKU_AS_OF_AND_TIME = "sku_asOf_computedAt";
   /** Products already stored by a run, read when a retried job resumes. */
   static final String FORECASTS_BY_RUN = "runId_sku";
+  /** The latest completed run of a business date, read by the timer path of the batch process: equality, then sort. */
+  static final String RUNS_BY_AS_OF_STATUS_AND_TIME = "asOf_status_completedAt";
 
   private final MongoTemplate mongoTemplate;
 
@@ -46,6 +48,9 @@ class ForecastIndexes implements InitializingBean {
       mongoTemplate.getCollection(ForecastDocument.COLLECTION).createIndex(
           Indexes.ascending("runId", "sku"),
           new IndexOptions().name(FORECASTS_BY_RUN));
+      mongoTemplate.getCollection(ForecastRunDocument.COLLECTION).createIndex(
+          Indexes.compoundIndex(Indexes.ascending("asOf", "status"), Indexes.descending("completedAt")),
+          new IndexOptions().name(RUNS_BY_AS_OF_STATUS_AND_TIME));
     } catch (MongoServerException conflict) {
       throw new IllegalStateException("Cannot create the forecasting indexes: an index with the same name or keys "
           + "exists with different options. Drop it deliberately and restart.", conflict);
