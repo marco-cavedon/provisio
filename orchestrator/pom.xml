@@ -107,6 +107,22 @@
   </dependencies>
 
   <build>
+    <resources>
+      <!-- Declaring resources replaces Maven's default, so src/main/resources is listed again -->
+      <resource>
+        <directory>src/main/resources</directory>
+      </resource>
+      <!-- Process models live in the top-level processes/ folder (ADR 0009) and are deployed by the application at
+           startup (ProcessDeploymentConfiguration): on the classpath under processes/, without the README -->
+      <resource>
+        <directory>${project.basedir}/../processes</directory>
+        <targetPath>processes</targetPath>
+        <includes>
+          <include>*.bpmn</include>
+          <include>*.dmn</include>
+        </includes>
+      </resource>
+    </resources>
     <plugins>
       <plugin>
         <groupId>org.springframework.boot</groupId>

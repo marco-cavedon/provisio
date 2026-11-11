@@ -22,6 +22,10 @@ talks to ([ADR 0011](../docs/adr/0011-frontend-only-talks-to-bff.md)). It is the
 - `ProvisioApplicationTests` — the application context assembles (no broker needed: job workers are disabled;
   MongoDB from a container, because the inventory module creates its indexes at startup).
 - `ModularityTests` — module boundaries are respected; module documentation is written to `target/spring-modulith-docs`.
+- `ProcessResourcesTests` — the models of the top-level `processes/` folder are on the classpath where the startup
+  deployment looks for them (no Docker needed). Tests do not deploy them automatically
+  (`camunda.client.deployment.enabled=false` in `src/test/resources/application.properties`): each process test deploys
+  what it needs.
 - `MongoConfigurationTests` — the application refuses to start without a MongoDB password (no Docker needed).
 - `MongoTransactionTests` — multi-document transactions commit and, above all, roll back against a real MongoDB
   (Docker required). Without a transaction manager, `@Transactional` would be silently ignored.
@@ -75,6 +79,12 @@ Integration tests share one Spring context and one MongoDB container: keep their
 imports identical, or each variant starts its own.
 Process tests use a shared Camunda runtime (`camunda.process-test.runtime-mode=shared`) pinned to the stack's engine
 version; the first run downloads the `camunda/camunda` image.
+
+## Process deployment
+
+At startup the orchestrator deploys every BPMN and DMN model of the top-level [`processes/`](../processes/README.md)
+folder in a single deployment (`ProcessDeploymentConfiguration`); the build packages them on the classpath. Unchanged
+models create no new version. The forecast batch timer is therefore armed whenever the orchestrator runs.
 
 ## Inventory module
 
