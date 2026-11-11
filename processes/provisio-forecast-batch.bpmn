@@ -87,7 +87,7 @@
     <bpmn:sequenceFlow id="Flow_0xfaoj2" name="healthy" sourceRef="Gateway_0jk64x3" targetRef="EndEvent_1">
       <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=forecastRunAssessment.outcome = "healthy"</bpmn:conditionExpression>
     </bpmn:sequenceFlow>
-    <bpmn:endEvent id="Event_0i2fky8">
+    <bpmn:endEvent id="Event_0i2fky8" name="Forecasts degraded">
       <bpmn:incoming>Flow_0nm1ic6</bpmn:incoming>
     </bpmn:endEvent>
     <bpmn:sequenceFlow id="Flow_0nm1ic6" name="degraded" sourceRef="Gateway_0jk64x3" targetRef="Event_0i2fky8">
@@ -158,6 +158,9 @@
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Event_0i2fky8_di" bpmnElement="Event_0i2fky8">
         <dc:Bounds x="1112" y="372" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1106" y="415" width="49" height="27" />
+        </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Event_13u7wyo_di" bpmnElement="Event_13u7wyo">
         <dc:Bounds x="1112" y="152" width="36" height="36" />
