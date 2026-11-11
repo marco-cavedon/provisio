@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="https://www.omg.org/spec/DMN/20191111/MODEL/" xmlns:dmndi="https://www.omg.org/spec/DMN/20191111/DMNDI/" xmlns:dc="http://www.omg.org/spec/DMN/20180521/DC/" xmlns:modeler="http://camunda.org/schema/modeler/1.0" xmlns:biodi="http://bpmn.io/schema/dmn/biodi/2.0" id="Definitions_forecast_run_assessment" name="Assess forecast run" namespace="http://camunda.org/schema/1.0/dmn" exporter="Camunda Modeler" exporterVersion="5.52.0" modeler:executionPlatform="Camunda Cloud" modeler:executionPlatformVersion="8.9.0">
+  <decision id="provisio-forecast-run-assessment" name="Forecast run assessment">
+    <variable id="Variable_1" name="Forecast run assessment" typeRef="Any" />
+    <decisionTable id="DecisionTable_0ow7km9">
+      <input id="Input_1" label="requested">
+        <inputExpression id="InputExpression_1" typeRef="number">
+          <text>forecastRun.requested</text>
+        </inputExpression>
+      </input>
+      <input id="InputClause_0onvi6r" label="fail rate" biodi:width="192">
+        <inputExpression id="LiteralExpression_1ktm7mv" typeRef="number">
+          <text>forecastRun.failed / forecastRun.requested</text>
+        </inputExpression>
+      </input>
+      <output id="Output_1" name="outcome" typeRef="string">
+        <outputValues id="UnaryTests_008fjys">
+          <text>"healthy","degraded","unusable"</text>
+        </outputValues>
+      </output>
+      <output id="OutputClause_1wruts0" name="reason" typeRef="string" />
+      <rule id="DecisionRule_0tty5c5">
+        <inputEntry id="UnaryTests_1v1l1z9">
+          <text>0</text>
+        </inputEntry>
+        <inputEntry id="UnaryTests_1muxv3f">
+          <text>-</text>
+        </inputEntry>
+        <outputEntry id="LiteralExpression_13p2x3q">
+          <text>"unusable"</text>
+        </outputEntry>
+        <outputEntry id="LiteralExpression_0qt2g5g">
+          <text>"No products were requested: check the seed and the product catalogue."</text>
+        </outputEntry>
+      </rule>
+      <rule id="DecisionRule_0koh4by">
+        <inputEntry id="UnaryTests_1csy1ev">
+          <text>&gt; 0</text>
+        </inputEntry>
+        <inputEntry id="UnaryTests_0p6szxl">
+          <text>&lt;= 0.1</text>
+        </inputEntry>
+        <outputEntry id="LiteralExpression_1dkf653">
+          <text>"healthy"</text>
+        </outputEntry>
+        <outputEntry id="LiteralExpression_1fsqzos">
+          <text>"Forecasts available for nearly all products ("+ string(forecastRun.ok) + " of " + string(forecastRun.requested) + " with a forecast)."</text>
+        </outputEntry>
+      </rule>
+      <rule id="DecisionRule_0ohiao8">
+        <inputEntry id="UnaryTests_0e1wi6k">
+          <text>&gt; 0</text>
+        </inputEntry>
+        <inputEntry id="UnaryTests_1m8uu5t">
+          <text>]0.1..0.5]</text>
+        </inputEntry>
+        <outputEntry id="LiteralExpression_01qvkb0">
+          <text>"degraded"</text>
+        </outputEntry>
+        <outputEntry id="LiteralExpression_164subg">
+          <text>"Forecasts missing for a significant share of products: check the failure codes before relying on them (" + string(forecastRun.failed) + " of " + string(forecastRun.requested) + " without a forecast)."</text>
+        </outputEntry>
+      </rule>
+      <rule id="DecisionRule_1hijok9">
+        <inputEntry id="UnaryTests_1f1q7kt">
+          <text>&gt; 0</text>
+        </inputEntry>
+        <inputEntry id="UnaryTests_0vx77qw">
+          <text>&gt; 0.5</text>
+        </inputEntry>
+        <outputEntry id="LiteralExpression_1gdb8ve">
+          <text>"unusable"</text>
+        </outputEntry>
+        <outputEntry id="LiteralExpression_0xzf7o6">
+          <text>"Forecasts missing for most products: the run cannot support replenishment decisions ("+ string(forecastRun.failed) + " of " + string(forecastRun.requested) + " without a forecast)."</text>
+        </outputEntry>
+      </rule>
+    </decisionTable>
+  </decision>
+  <dmndi:DMNDI>
+    <dmndi:DMNDiagram>
+      <dmndi:DMNShape id="provisio-forecast-run-assessment_di" dmnElementRef="provisio-forecast-run-assessment">
+        <dc:Bounds height="80" width="180" x="160" y="100" />
+      </dmndi:DMNShape>
+    </dmndi:DMNDiagram>
+  </dmndi:DMNDI>
+</definitions>
