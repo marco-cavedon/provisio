@@ -36,5 +36,6 @@ ADRs are immutable once accepted: a changed decision gets a **new** ADR that sup
 | [0029](0029-planned-business-calendar.md) | Planned business calendar beyond the observed data | Accepted |
 | [0030](0030-forecasting-module-and-batch.md) | Forecasting module and forecast batch | Accepted |
 | [0031](0031-business-time.md) | Business time from a configurable business clock | Accepted |
+| [0032](0032-forecast-batch-process.md) | Forecast batch process | Accepted |
 
 New ADRs start from [`template.md`](template.md).
