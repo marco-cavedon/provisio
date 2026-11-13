@@ -31,8 +31,10 @@ jobs:
           - service: orchestrator
             title: Provisio orchestrator
             description: Provisio job workers (agent tools) for Camunda 8
-            # The forecasting contract, outside the build context (orchestrator/Dockerfile)
-            build-contexts: contracts=contracts
+            # The forecasting contract and the process models, outside the build context (orchestrator/Dockerfile)
+            build-contexts: |
+              contracts=contracts
+              processes=processes
           - service: forecasting
             title: Provisio forecasting
             description: Provisio stateless demand forecasting service

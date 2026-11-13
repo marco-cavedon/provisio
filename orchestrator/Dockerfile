@@ -8,7 +8,9 @@
 # The build generates the forecasting client from contracts/forecasting/openapi.yaml, which is outside this folder.
 # It comes in as the named build context "contracts" (docker-compose.yml, CI and release workflows:
 # --build-context contracts=contracts), so the build context stays this folder and the POM finds the contract at
-# ../contracts, as it does outside Docker.
+# ../contracts, as it does outside Docker. The process models of the top-level processes/ folder, deployed by the
+# application at startup, come in the same way as the build context "processes" and are packaged by the POM from
+# ../processes.
 #
 # Multi-platform (linux/amd64, linux/arm64; release workflow): the jar is platform-independent bytecode, so the build
 # and extract stages run once on the builder's native platform ($BUILDPLATFORM). Only the runtime stage is built per
@@ -22,6 +24,7 @@ FROM --platform=$BUILDPLATFORM eclipse-temurin:21.0.13_9-jdk-resolute AS build
 WORKDIR /workspace/orchestrator
 
 COPY --from=contracts forecasting /workspace/contracts/forecasting
+COPY --from=processes . /workspace/processes
 COPY mvnw pom.xml ./
 COPY .mvn .mvn
 COPY src/main src/main
