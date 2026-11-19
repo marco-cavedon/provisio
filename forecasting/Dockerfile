@@ -13,7 +13,7 @@
 # refers to the interpreter by path and is only valid on the release it was created with.
 
 # uv is copied from its official image: a single static binary, nothing else
-FROM ghcr.io/astral-sh/uv:0.13.7 AS uv
+FROM ghcr.io/astral-sh/uv:0.13.9 AS uv
 
 # ---------------------------------------------------------------- build
 FROM python:3.13.18-slim-trixie AS build
